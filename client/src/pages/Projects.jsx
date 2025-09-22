@@ -40,7 +40,7 @@ const Projects = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto mt-10 space-y-6">
+    <div className="max-w-5xl mx-auto mt-10 space-y-6 min-h-screen">
       <div className="glass rounded-xl p-6">
         <h2 className="text-xl font-semibold mb-4 text-white">Create Project</h2>
         {error && <div className="bg-rose-500/10 text-rose-300 p-3 rounded mb-4 border border-rose-500/20">{error}</div>}
