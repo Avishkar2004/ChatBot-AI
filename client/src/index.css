@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark theme base */
+:root {
+  color-scheme: dark;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-[#0b0f13] text-gray-100 antialiased;
+}
+
+/* Utility components */
+.glass {
+  @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-xl;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 font-medium transition;
+}
+
+.input {
+  @apply w-full rounded-md bg-white/5 border border-white/10 px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50;
+}
+
