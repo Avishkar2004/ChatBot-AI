@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { validationResult } from "express-validator";
 import User from "../models/User.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
+const JWT_SECRET = process.env.JWT_SECRET || "Avishkar";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 export const register = async (req, res) => {

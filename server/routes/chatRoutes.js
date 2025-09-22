@@ -6,9 +6,6 @@ import Prompt from "../models/Prompt.js";
 import Groq from "groq-sdk";
 import "dotenv/config";
 
-// This is a stub that echoes back messages.
-// Hook in OpenAI/OpenRouter later and stream via SSE.
-
 const router = Router();
 
 router.use(requireAuth);
@@ -49,9 +46,12 @@ router.post(
         // Map non-Groq or deprecated names to current Groq defaults
         if (mm.startsWith("gpt")) return FALLBACK_MODEL;
         if (mm.includes("gpt-4o")) return FALLBACK_MODEL;
-        if (mm === "llama3-8b-8192" || mm === "llama3-70b-8192") return FALLBACK_MODEL; // deprecated
-        if (mm.includes("llama3.1") || mm.includes("llama-3.1")) return FALLBACK_MODEL;
-        if (mm.includes("mistral") || mm.includes("mixtral")) return "mixtral-8x7b-32768";
+        if (mm === "llama3-8b-8192" || mm === "llama3-70b-8192")
+          return FALLBACK_MODEL; // deprecated
+        if (mm.includes("llama3.1") || mm.includes("llama-3.1"))
+          return FALLBACK_MODEL;
+        if (mm.includes("mistral") || mm.includes("mixtral"))
+          return "mixtral-8x7b-32768";
         return m; // assume caller passed a valid Groq model
       };
       let model = normalizeModel(requestedModel);
@@ -68,7 +68,11 @@ router.post(
         });
       } catch (inner) {
         const msg = inner?.response?.data || inner?.message || "";
-        const isDecommissioned = typeof msg === "string" ? msg.includes("model_decommissioned") || msg.includes("decommissioned") : false;
+        const isDecommissioned =
+          typeof msg === "string"
+            ? msg.includes("model_decommissioned") ||
+              msg.includes("decommissioned")
+            : false;
         if (isDecommissioned && model !== FALLBACK_MODEL) {
           // Retry once with fallback
           model = FALLBACK_MODEL;

@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
+const JWT_SECRET = process.env.JWT_SECRET || "Avishkar";
 
 export const requireAuth = (req, res, next) => {
   const authHeader = req.headers.authorization || "";
@@ -20,5 +20,3 @@ export const requireAuth = (req, res, next) => {
 };
 
 export default requireAuth;
-
-
