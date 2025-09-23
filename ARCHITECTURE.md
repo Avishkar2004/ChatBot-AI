@@ -1,46 +1,50 @@
-# Architecture Overview
+## Chatbot AI – Brief Architecture & Design
 
-## System
+### Overview
+Full‑stack chatbot platform with user auth, multi‑project (agent) management, stored prompts, and chat powered by Groq LLM.
 
-- Client: React + Vite + Tailwind
-- Server: Node.js + Express
-- Database: MongoDB via Mongoose
-- Auth: Email/password with JWT; token-based auth for API
-- LLM: Groq chat completions; system prompt composed from project prompts
+### Components
+- Client (`client/`): React + Vite + Tailwind UI
+  - Auth pages (Login/Signup), Dashboard, Projects, Project Detail, Project Chat
+  - Stores JWT in `localStorage`; calls API with `Authorization: Bearer <token>`
+- Server (`server/`): Node.js + Express + MongoDB (Mongoose)
+  - Auth (register/login/me), Projects CRUD, Prompts CRUD, Chat endpoint to Groq
+  - JWT auth middleware attaches `req.user`
+- Database: MongoDB (Atlas or local)
+- LLM: Groq Chat Completions (model configurable, defaults to `llama-3.1-8b-instant`)
 
-## Domain Model
+### Data Model (simplified)
+- User: `{ email, passwordHash }`
+- Project: `{ userId, name, description, model, provider }`
+- Prompt: `{ userId, projectId, title, content }`
 
-- User: { email, passwordHash }
-- Project: { userId, name, description, model, provider }
-- Prompt: { userId, projectId, title, content }
+Relations: A User owns many Projects; a Project owns many Prompts.
 
-A User owns many Projects. A Project owns many Prompts.
+### Request Flow
+1) Client obtains JWT on login; stores in `localStorage`.
+2) For protected endpoints, client sends `Authorization: Bearer <token>`.
+3) Server verifies JWT, sets `req.user`.
+4) Routes enforce ownership by `userId` when accessing Projects/Prompts.
+5) Chat endpoint assembles system message from project + prompts, calls Groq, returns reply.
 
-## API
+### API (high‑level)
+- `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`
+- `GET/POST /api/projects`, `GET/PUT/DELETE /api/projects/:projectId`
+- `GET/POST /api/projects/:projectId/prompts`, `PUT/DELETE /api/projects/:projectId/prompts/:promptId`
+- `POST /api/projects/:projectId/chat` → `{ reply }`
 
-- Auth: /api/auth/* (register, login, me)
-- Projects: /api/projects (CRUD)
-- Prompts: /api/projects/:projectId/prompts (CRUD)
-- Chat: /api/projects/:projectId/chat → calls Groq with system + user message
-
-## Request Flow
-
-1) Client stores JWT in localStorage after login
-2) For protected routes, client sends Authorization: Bearer <token>
-3) Server middleware validates JWT and attaches req.user
-4) Routes enforce ownership (userId) on Projects/Prompts
-5) Chat route fetches prompts, builds system message, calls Groq, returns reply
-
-## Frontend Structure
-
-- App routes: Home, Login, Signup, Dashboard, Projects, ProjectDetail, ProjectChat
-- Components: Navbar, Footer, reusable UI (Button, Input, Card, Container)
-- State: AuthContext for auth/user info
-- Styling: Tailwind dark theme with brand palette
-
-## Security
-
+### Security
 - Passwords hashed with bcrypt
-- JWT signed with secret and expiry
-- Protected routes require valid token
-- Project/prompt access filtered by userId
+- JWT signed with `JWT_SECRET`, expiry `JWT_EXPIRES_IN`
+- Route‑level ownership checks (`userId`)
+
+### Deployment & Config
+- Client: Vercel (public URL)
+- Server: Vercel/Node host (public API URL)
+- CORS: allowlist of client origins via `CLIENT_ORIGINS` env
+
+Env (server/.env):
+- `MONGODB_URI` – Mongo Atlas/local connection string
+- `PORT` – API port (dev)
+- `JWT_SECRET`, `JWT_EXPIRES_IN`
+- `GROQ_API_KEY`, `GROQ_MODEL`
