@@ -19,7 +19,7 @@ Modern full-stack chatbot platform with user accounts, multi-project (agent) man
 
 ```bash
 # Clone your repo (replace with your Git URL)
-git clone <your-repo-url> chatbot-ai
+git clone https://github.com/Avishkar2004/chatBot-AI
 cd chatbot-ai
 
 # Install deps
