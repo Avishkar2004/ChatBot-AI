@@ -57,11 +57,11 @@ npm run dev
 
 # Terminal 2: Client
 cd client
-npm start
+npm start / npm run dev
 ```
 
 - API: http://localhost:8000
-- Web: http://localhost:5173 (Vite default)
+- Web: http://localhost:3000
 
 ## Login & Test
 
@@ -97,13 +97,7 @@ npm start
   - npm run dev — start Express in dev (nodemon)
   - npm start — start Express in prod
 - Client
-  - npm start — run Vite dev server
-  - npm run build — build static assets
-
-## Deploying
-
-- Server: deploy to any Node host (Railway/Render/Fly/Heroku). Set environment variables (Mongo, JWT, GROQ).
-- Client: npm run build and deploy dist/ to static hosting (Vercel/Netlify).
+  - npm start — run start
 
 ## Documentation
 
