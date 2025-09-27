@@ -15,12 +15,27 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    
+    // Basic validation
+    if (!email || !password) {
+      setError('Please fill in all fields');
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const { token, user } = await apiLogin(email, password);
-      login(token, user);
+      const response = await apiLogin(email, password);
+      
+      // Validate response structure
+      if (!response.token || !response.user) {
+        throw new Error('Invalid response from server');
+      }
+      
+      login(response.token, response.user);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message);
+      console.error('Login error:', err);
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
