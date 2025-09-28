@@ -1,72 +1,154 @@
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
+import api, { API_ENDPOINTS } from "../config/api.js";
 
-export async function listProjects(token) {
-  const res = await fetch(`${API_BASE}/api/projects`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Failed to fetch projects');
-  return data;
+export async function listProjects() {
+  try {
+    const response = await api.get(API_ENDPOINTS.projects.list);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch projects:", error);
+    throw error;
+  }
 }
 
-export async function createProject(token, payload) {
-  const res = await fetch(`${API_BASE}/api/projects`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Failed to create project');
-  return data;
+export async function createProject(payload) {
+  try {
+    const response = await api.post(API_ENDPOINTS.projects.create, payload);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to create project:", error);
+
+    // Extract more specific error message
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.message) {
+      throw new Error(error.message);
+    } else {
+      throw new Error("Failed to create project");
+    }
+  }
 }
 
-export async function getProject(token, projectId) {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Failed to fetch project');
-  return data;
+export async function getProject(projectId) {
+  try {
+    const response = await api.get(API_ENDPOINTS.projects.get(projectId));
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch project:", error);
+    throw error;
+  }
 }
 
-export async function listPrompts(token, projectId) {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/prompts`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Failed to fetch prompts');
-  return data;
+export async function updateProject(projectId, payload) {
+  try {
+    const response = await api.put(
+      API_ENDPOINTS.projects.update(projectId),
+      payload
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Failed to update project:", error);
+    throw error;
+  }
 }
 
-export async function createPrompt(token, projectId, payload) {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/prompts`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Failed to create prompt');
-  return data;
+export async function deleteProject(projectId) {
+  try {
+    const response = await api.delete(API_ENDPOINTS.projects.delete(projectId));
+    return response.data;
+  } catch (error) {
+    console.error("Failed to delete project:", error);
+    throw error;
+  }
 }
 
-export async function sendChat(token, projectId, message) {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/chat`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ message }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Failed to chat');
-  return data;
+export async function listPrompts(projectId) {
+  try {
+    const response = await api.get(API_ENDPOINTS.prompts.list(projectId));
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch prompts:", error);
+    throw error;
+  }
 }
 
+export async function createPrompt(projectId, payload) {
+  try {
+    const response = await api.post(
+      API_ENDPOINTS.prompts.create(projectId),
+      payload
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Failed to create prompt:", error);
+    throw error;
+  }
+}
 
+export async function getPrompt(projectId, promptId) {
+  try {
+    const response = await api.get(
+      API_ENDPOINTS.prompts.get(projectId, promptId)
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch prompt:", error);
+    throw error;
+  }
+}
+
+export async function updatePrompt(projectId, promptId, payload) {
+  try {
+    const response = await api.put(
+      API_ENDPOINTS.prompts.update(projectId, promptId),
+      payload
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Failed to update prompt:", error);
+    throw error;
+  }
+}
+
+export async function deletePrompt(projectId, promptId) {
+  try {
+    const response = await api.delete(
+      API_ENDPOINTS.prompts.delete(projectId, promptId)
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Failed to delete prompt:", error);
+    throw error;
+  }
+}
+
+export async function sendChat(projectId, message) {
+  try {
+    const response = await api.post(API_ENDPOINTS.chat.send(projectId), {
+      message,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Failed to send chat:", error);
+    throw error;
+  }
+}
+
+export async function getChatHistory(projectId) {
+  try {
+    const response = await api.get(API_ENDPOINTS.chat.history(projectId));
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch chat history:", error);
+    throw error;
+  }
+}
+
+export async function clearChatHistory(projectId) {
+  try {
+    const response = await api.delete(API_ENDPOINTS.chat.clear(projectId));
+    return response.data;
+  } catch (error) {
+    console.error("Failed to clear chat history:", error);
+    throw error;
+  }
+}

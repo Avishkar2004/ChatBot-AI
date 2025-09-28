@@ -15,9 +15,9 @@ const ProjectDetail = () => {
   const load = async () => {
     setError('');
     try {
-      const p = await getProject(token, projectId);
+      const p = await getProject(projectId);
       setProject(p);
-      const pr = await listPrompts(token, projectId);
+      const pr = await listPrompts(projectId);
       setPrompts(pr);
     } catch (e) {
       setError(e.message);
@@ -29,7 +29,7 @@ const ProjectDetail = () => {
   const onCreatePrompt = async (e) => {
     e.preventDefault();
     try {
-      await createPrompt(token, projectId, { title, content });
+      await createPrompt(projectId, { title, content });
       setTitle('');
       setContent('');
       await load();

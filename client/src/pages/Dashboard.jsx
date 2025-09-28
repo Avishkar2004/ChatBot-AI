@@ -13,7 +13,7 @@ const Dashboard = () => {
     const run = async () => {
       setLoading(true);
       try {
-        const data = await fetchMe(token);
+        const data = await fetchMe();
         setServerUser(data.user);
       } catch (e) {
         setError(e.message);
@@ -29,7 +29,7 @@ const Dashboard = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-white">Welcome back</h2>
+          <h2 className="text-3xl font-bold text-white">Welcome back, {user?.username || user?.email}</h2>
           <p className="text-gray-300 mt-1">{user?.email}</p>
         </div>
         <div className="hidden sm:flex gap-3">
@@ -87,11 +87,19 @@ const Dashboard = () => {
                   <p className="text-sm text-gray-100 break-all">{serverUser.id || serverUser._id}</p>
                 </div>
                 <div className="bg-black/30 border border-white/10 rounded-lg p-4">
+                  <p className="text-xs text-gray-400">Username</p>
+                  <p className="text-sm text-gray-100 break-all">{serverUser.username || 'N/A'}</p>
+                </div>
+                <div className="bg-black/30 border border-white/10 rounded-lg p-4">
                   <p className="text-xs text-gray-400">Email</p>
                   <p className="text-sm text-gray-100 break-all">{serverUser.email}</p>
                 </div>
+                <div className="bg-black/30 border border-white/10 rounded-lg p-4">
+                  <p className="text-xs text-gray-400">Status</p>
+                  <p className="text-sm text-gray-100">Active</p>
+                </div>
                 <div className="bg-black/30 border border-white/10 rounded-lg p-4 sm:col-span-2">
-                  <p className="text-xs text-gray-400">Raw</p>
+                  <p className="text-xs text-gray-400">Raw Data</p>
                   <pre className="text-xs text-gray-200 overflow-auto">{JSON.stringify(serverUser, null, 2)}</pre>
                 </div>
               </div>
@@ -113,7 +121,7 @@ const Dashboard = () => {
           <div className="glass rounded-xl p-6">
             <h3 className="text-lg font-semibold text-white">Environment</h3>
             <p className="text-gray-300 mt-2">Client URL: <span className="text-gray-400">{window.location.origin}</span></p>
-            <p className="text-gray-300 mt-1">API Base: <span className="text-gray-400">{process.env.REACT_APP_API_BASE || 'http://localhost:8000'}</span></p>
+            <p className="text-gray-300 mt-1">API Base: <span className="text-gray-400">{process.env.REACT_APP_API_BASE || 'http://localhost:8080'}</span></p>
           </div>
         </div>
       </div>

@@ -13,7 +13,7 @@ const Projects = () => {
   const load = async () => {
     setError('');
     try {
-      const data = await listProjects(token);
+      const data = await listProjects();
       setItems(data);
     } catch (e) {
       setError(e.message);
@@ -29,7 +29,7 @@ const Projects = () => {
     setLoading(true);
     setError('');
     try {
-      await createProject(token, { name });
+      await createProject({ name });
       setName('');
       await load();
     } catch (e) {

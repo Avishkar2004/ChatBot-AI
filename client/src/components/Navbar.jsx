@@ -38,7 +38,7 @@ const Navbar = () => {
   const navLinkClass = ({ isActive }) =>
     `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${isActive ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`;
 
-  const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : '?';
+  const userInitial = user?.username ? user.username.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : '?');
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -95,7 +95,7 @@ const Navbar = () => {
                     <div className="h-8 w-8 rounded-full bg-gradient-to-br from-emerald-500 to-blue-600 text-white flex items-center justify-center text-sm font-semibold">
                       {userInitial}
                     </div>
-                    {user?.email && <span className="text-gray-300 text-sm hidden lg:block max-w-32 truncate">{user.email}</span>}
+                    {user?.username && <span className="text-gray-300 text-sm hidden lg:block max-w-32 truncate">{user.username.toUpperCase()}</span>}
                     <svg className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
                     </svg>

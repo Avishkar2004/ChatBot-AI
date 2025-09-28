@@ -13,16 +13,50 @@ router.post(
   [body("name").isLength({ min: 1 }).withMessage("Name is required")],
   async (req, res) => {
     try {
+      // Debug: Log the request body
+      
+      // Validate request body
       const { name, description = "", model, provider } = req.body;
+      
+      // Check if name is provided
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ 
+          message: "Project name is required and must be a string" 
+        });
+      }
+      
+      const trimmedName = name.trim();
+      
+      // Check if name is not empty after trimming
+      if (!trimmedName) {
+        return res.status(400).json({ 
+          message: "Project name cannot be empty" 
+        });
+      }
+      
+      // Check if project with same name already exists for this user
+      const existingProject = await Project.findOne({ 
+        userId: req.user.id, 
+        name: trimmedName 
+      });
+      
+      if (existingProject) {
+        return res.status(409).json({ 
+          message: "Project with this name already exists" 
+        });
+      }
+      
       const project = await Project.create({
         userId: req.user.id,
-        name,
-        description,
-        model,
-        provider,
+        name: trimmedName,
+        description: (description || "").trim(),
+        model: model || "gpt-4o-mini",
+        provider: provider || "openai",
       });
+      
       res.status(201).json(project);
     } catch (e) {
+      console.error('Create project error:', e);
       res.status(400).json({ message: e.message });
     }
   }

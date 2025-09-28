@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 const Signup = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,28 +16,28 @@ const Signup = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     // Basic validation
-    if (!email || !password) {
+    if (!username || !email || !password) {
       setError('Please fill in all fields');
       setLoading(false);
       return;
     }
-    
+
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
       setLoading(false);
       return;
     }
-    
+
     try {
-      const response = await apiRegister(email, password);
-      
+      const response = await apiRegister(username, email, password);
+
       // Validate response structure
       if (!response.token || !response.user) {
         throw new Error('Invalid response from server');
       }
-      
+
       login(response.token, response.user);
       navigate('/dashboard');
     } catch (err) {
@@ -53,6 +54,10 @@ const Signup = () => {
         <h2 className="text-2xl font-bold mb-4 text-white">Create an account</h2>
         {error && <div className="bg-rose-500/10 text-rose-300 p-3 rounded mb-4 border border-rose-500/20">{error}</div>}
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          <div>
+            <label className="block text-sm text-gray-300 mb-1" htmlFor="username">Username</label>
+            <input id="username" name="username" autoComplete="username" aria-required="true" type="text" className="input" value={username} onChange={(e) => setUsername(e.target.value)} required />
+          </div>
           <div>
             <label className="block text-sm text-gray-300 mb-1" htmlFor="email">Email</label>
             <input id="email" name="email" autoComplete="email" inputMode="email" aria-required="true" aria-invalid={!!error} type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required />
