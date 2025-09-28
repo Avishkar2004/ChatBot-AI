@@ -11,6 +11,7 @@ import Projects from "./pages/Projects.jsx";
 import ProjectDetail from "./pages/ProjectDetail.jsx";
 import ProjectChat from "./pages/ProjectChat.jsx";
 import Footer from "./components/Footer.jsx";
+import Features from "./components/Features.jsx";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/features" element={<Features />} />
           <Route
             path="/dashboard"
             element={

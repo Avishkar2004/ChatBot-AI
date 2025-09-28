@@ -1,6 +1,7 @@
 import React from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import Container from "../components/ui/Container.jsx";
+import Features from "../components/Features.jsx";
 
 function Home() {
     const { isAuthenticated, user, loading } = useAuth();
@@ -156,93 +157,8 @@ function Home() {
                 </Container>
             </section>
 
-            {/* Features Section */}
-            <section className="py-24 bg-white dark:bg-gray-800">
-                <Container>
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                            Powerful AI Features
-                        </h2>
-                        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                            Everything you need to build, deploy, and manage intelligent AI agents
-                        </p>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <div className="bg-gray-50 dark:bg-gray-700 rounded-2xl p-8 hover:shadow-lg transition-all duration-200">
-                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl flex items-center justify-center mb-6">
-                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                </svg>
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Smart Conversations</h3>
-                            <p className="text-gray-600 dark:text-gray-300">
-                                Advanced natural language processing for human-like conversations with context awareness and memory.
-                            </p>
-                        </div>
-
-                        <div className="bg-gray-50 dark:bg-gray-700 rounded-2xl p-8 hover:shadow-lg transition-all duration-200">
-                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl flex items-center justify-center mb-6">
-                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                </svg>
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Project Management</h3>
-                            <p className="text-gray-600 dark:text-gray-300">
-                                Organize your AI agents into projects with custom prompts, settings, and conversation history.
-                            </p>
-                        </div>
-
-                        <div className="bg-gray-50 dark:bg-gray-700 rounded-2xl p-8 hover:shadow-lg transition-all duration-200">
-                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl flex items-center justify-center mb-6">
-                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Real-time Processing</h3>
-                            <p className="text-gray-600 dark:text-gray-300">
-                                Lightning-fast AI responses with real-time streaming and instant message delivery.
-                            </p>
-                        </div>
-
-                        <div className="bg-gray-50 dark:bg-gray-700 rounded-2xl p-8 hover:shadow-lg transition-all duration-200">
-                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl flex items-center justify-center mb-6">
-                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
-                                </svg>
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Custom Prompts</h3>
-                            <p className="text-gray-600 dark:text-gray-300">
-                                Create and manage custom prompts to fine-tune your AI agents for specific use cases and industries.
-                            </p>
-                        </div>
-
-                        <div className="bg-gray-50 dark:bg-gray-700 rounded-2xl p-8 hover:shadow-lg transition-all duration-200">
-                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl flex items-center justify-center mb-6">
-                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                </svg>
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Secure & Private</h3>
-                            <p className="text-gray-600 dark:text-gray-300">
-                                Enterprise-grade security with end-to-end encryption and privacy protection for all conversations.
-                            </p>
-                        </div>
-
-                        <div className="bg-gray-50 dark:bg-gray-700 rounded-2xl p-8 hover:shadow-lg transition-all duration-200">
-                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl flex items-center justify-center mb-6">
-                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                                </svg>
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Analytics & Insights</h3>
-                            <p className="text-gray-600 dark:text-gray-300">
-                                Track conversation metrics, user engagement, and AI performance with detailed analytics dashboard.
-                            </p>
-                        </div>
-                    </div>
-                </Container>
-            </section>
+      {/* Features Section */}
+      <Features />
 
             {/* CTA Section */}
             {!isAuthenticated && (
