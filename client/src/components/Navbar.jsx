@@ -124,10 +124,10 @@ const Navbar = () => {
                         </div>
                       </button>
                       <div className="h-px bg-white/10 my-2" />
-                      <button 
-                        onClick={handleLogout} 
+                      <button
+                        onClick={handleLogout}
                         disabled={isLoggingOut}
-                        className="block w-full text-left px-4 py-2 text-sm text-rose-400 hover:bg-white/5 transition-colors duration-200 disabled:opacity-50" 
+                        className="block w-full text-left px-4 py-2 text-sm text-rose-400 hover:bg-white/5 transition-colors duration-200 disabled:opacity-50"
                         role="menuitem"
                       >
                         <div className="flex items-center gap-2">
@@ -195,8 +195,8 @@ const Navbar = () => {
                   <p className="text-xs text-gray-400 uppercase tracking-wider">Account</p>
                   <p className="text-sm text-gray-200 truncate">{user?.email}</p>
                 </div>
-                <button 
-                  onClick={handleLogout} 
+                <button
+                  onClick={handleLogout}
                   disabled={isLoggingOut}
                   className="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-50 transition-colors duration-200"
                 >
