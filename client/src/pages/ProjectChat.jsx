@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getProject, sendChat } from '../services/projects.js';
+import Page from '../components/layout/Page.jsx';
 
 const ProjectChat = () => {
   const { projectId } = useParams();
@@ -43,7 +44,7 @@ const ProjectChat = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <Page>
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-3">
@@ -208,7 +209,7 @@ const ProjectChat = () => {
           </form>
         </div>
       </div>
-    </div>
+    </Page>
   );
 };
 

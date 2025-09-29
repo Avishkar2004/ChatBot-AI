@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { listProjects, createProject, updateProject, deleteProject } from '../services/projects.js';
+import Page from '../components/layout/Page.jsx';
 
 const Projects = () => {
   const { token } = useAuth();
@@ -88,7 +89,7 @@ const Projects = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <Page>
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -298,7 +299,7 @@ const Projects = () => {
           </div>
         )}
       </div>
-    </div>
+    </Page>
   );
 };
 

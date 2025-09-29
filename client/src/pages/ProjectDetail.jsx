@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getProject, listPrompts, createPrompt } from '../services/projects.js';
+import Page from '../components/layout/Page.jsx';
 
 const ProjectDetail = () => {
   const { projectId } = useParams();
@@ -39,7 +40,8 @@ const ProjectDetail = () => {
   };
 
   return (
-    <div className="min-h-screen max-w-5xl mx-auto pt-10 pb-16 space-y-6">
+    <Page>
+      <div className="max-w-5xl mx-auto pt-10 pb-16 px-4 space-y-6">
       <div className="glass rounded-xl p-6">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -71,7 +73,8 @@ const ProjectDetail = () => {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </Page>
   );
 };
 
