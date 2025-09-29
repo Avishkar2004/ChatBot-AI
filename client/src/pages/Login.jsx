@@ -17,22 +17,30 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     // Basic validation
     if (!email || !password) {
       setError('Please fill in all fields');
       setLoading(false);
       return;
     }
-    
+
+    // Very light client email format check before request
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Valid email is required');
+      setLoading(false);
+      return;
+    }
+
     try {
+
       const response = await apiLogin(email, password);
-      
+
       // Validate response structure
       if (!response.token || !response.user) {
         throw new Error('Invalid response from server');
       }
-      
+
       login(response.token, response.user);
       navigate('/dashboard');
     } catch (err) {
@@ -56,6 +64,7 @@ const Login = () => {
                 <input id="email" name="email" autoComplete="email" inputMode="email" aria-required="true" aria-invalid={!!error} type="email" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div>
+                
                 <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1" htmlFor="password">Password</label>
                 <input id="password" name="password" autoComplete="current-password" aria-required="true" type="password" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
