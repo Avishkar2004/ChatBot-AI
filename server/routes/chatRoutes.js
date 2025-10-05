@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { body, param } from "express-validator";
 import requireAuth from "../middleware/auth.js";
+import { chatRateLimit } from "../middleware/redisAuth.js";
+import redisCache from "../services/redisCache.js";
 import Project from "../models/Project.js";
 import Prompt from "../models/Prompt.js";
 import Groq from "groq-sdk";
@@ -13,6 +15,7 @@ router.use(requireAuth);
 router.post(
   "/:projectId/chat",
   [param("projectId").isMongoId(), body("message").isLength({ min: 1 })],
+  chatRateLimit(60 * 1000, 10), // 10 requests per minute
   async (req, res) => {
     const project = await Project.findOne({
       _id: req.params.projectId,
@@ -26,15 +29,24 @@ router.post(
 
     const groq = new Groq({ apiKey });
     const userMessage = req.body.message;
+    const sessionId = req.body.sessionId || `${req.user.id}_${req.params.projectId}`;
 
-    // Compose system prompt from project prompts
-    const prompts = await Prompt.find({ projectId: project._id }).sort({
-      createdAt: 1,
-    });
+    // Get cached prompts or fetch from database
+    let prompts = await redisCache.getCachedPrompts(project._id);
+    if (!prompts) {
+      prompts = await Prompt.find({ projectId: project._id }).sort({
+        createdAt: 1,
+      });
+      await redisCache.cachePrompts(project._id, prompts);
+    }
+
     const systemText = prompts.length
       ? `You are the agent for project "${project.name}". Use these instructions:\n\n` +
         prompts.map((p, i) => `${i + 1}. ${p.title}: ${p.content}`).join("\n")
       : `You are a helpful assistant for the project "${project.name}".`;
+
+    // Get chat history from Redis
+    const chatHistory = await redisCache.getCachedChatSession(sessionId);
 
     try {
       // Prefer explicit Groq-supported defaults; allow overrides via env or project.model
@@ -56,14 +68,18 @@ router.post(
       };
       let model = normalizeModel(requestedModel);
 
+      // Build messages array with chat history
+      const messages = [
+        { role: "system", content: systemText },
+        ...chatHistory.slice(-10), // Keep last 10 messages for context
+        { role: "user", content: userMessage },
+      ];
+
       let completion;
       try {
         completion = await groq.chat.completions.create({
           model,
-          messages: [
-            { role: "system", content: systemText },
-            { role: "user", content: userMessage },
-          ],
+          messages,
           temperature: 0.3,
         });
       } catch (inner) {
@@ -78,10 +94,7 @@ router.post(
           model = FALLBACK_MODEL;
           completion = await groq.chat.completions.create({
             model,
-            messages: [
-              { role: "system", content: systemText },
-              { role: "user", content: userMessage },
-            ],
+            messages,
             temperature: 0.3,
           });
         } else {
@@ -90,7 +103,12 @@ router.post(
       }
 
       const reply = completion.choices?.[0]?.message?.content?.trim() || "";
-      return res.json({ reply, model });
+      
+      // Store conversation in Redis
+      await redisCache.addMessageToSession(sessionId, { role: "user", content: userMessage });
+      await redisCache.addMessageToSession(sessionId, { role: "assistant", content: reply });
+      
+      return res.json({ reply, model, sessionId });
     } catch (e) {
       console.error("Groq chat error:", e?.response?.data || e.message || e);
       return res

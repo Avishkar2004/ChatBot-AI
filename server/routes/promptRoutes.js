@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { body, param } from "express-validator";
 import requireAuth from "../middleware/auth.js";
+import { apiCache, invalidateCache } from "../middleware/apiCache.js";
+import redisCache from "../services/redisCache.js";
 import Prompt from "../models/Prompt.js";
 import Project from "../models/Project.js";
 
@@ -16,17 +18,39 @@ async function assertProject(req, res, next) {
   next();
 }
 
-// List prompts
-router.get("/:projectId/prompts", assertProject, async (req, res) => {
-  const prompts = await Prompt.find({ projectId: req.project._id }).sort({ updatedAt: -1 });
-  res.json(prompts);
-});
+// List prompts with caching
+router.get("/:projectId/prompts", 
+  assertProject, 
+  apiCache({ ttl: 1800 }), // 30 minutes
+  async (req, res) => {
+    try {
+      // Try to get from cache first
+      const cachedPrompts = await redisCache.getCachedPrompts(req.project._id);
+      
+      if (cachedPrompts) {
+        return res.json(cachedPrompts);
+      }
+      
+      // If not in cache, fetch from database
+      const prompts = await Prompt.find({ projectId: req.project._id }).sort({ updatedAt: -1 });
+      
+      // Cache the results
+      await redisCache.cachePrompts(req.project._id, prompts);
+      
+      res.json(prompts);
+    } catch (error) {
+      console.error('Get prompts error:', error);
+      res.status(500).json({ message: 'Failed to fetch prompts' });
+    }
+  }
+);
 
-// Create prompt
+// Create prompt with cache invalidation
 router.post(
   "/:projectId/prompts",
   assertProject,
   [body("title").isLength({ min: 1 }), body("content").isLength({ min: 1 })],
+  invalidateCache(['prompts']),
   async (req, res) => {
     try {
       const prompt = await Prompt.create({
@@ -35,6 +59,10 @@ router.post(
         title: req.body.title,
         content: req.body.content,
       });
+      
+      // Invalidate cache
+      await redisCache.invalidatePrompts(req.project._id);
+      
       res.status(201).json(prompt);
     } catch (e) {
       res.status(400).json({ message: e.message });
@@ -42,31 +70,58 @@ router.post(
   }
 );
 
-// Update prompt
+// Update prompt with cache invalidation
 router.put(
   "/:projectId/prompts/:promptId",
   assertProject,
   [param("promptId").isMongoId()],
+  invalidateCache(['prompts']),
   async (req, res) => {
-    const prompt = await Prompt.findOneAndUpdate(
-      { _id: req.params.promptId, projectId: req.project._id, userId: req.user.id },
-      { $set: req.body },
-      { new: true }
-    );
-    if (!prompt) return res.status(404).json({ message: "Prompt not found" });
-    res.json(prompt);
+    try {
+      const prompt = await Prompt.findOneAndUpdate(
+        { _id: req.params.promptId, projectId: req.project._id, userId: req.user.id },
+        { $set: req.body },
+        { new: true }
+      );
+      if (!prompt) return res.status(404).json({ message: "Prompt not found" });
+      
+      // Invalidate cache
+      await redisCache.invalidatePrompts(req.project._id);
+      
+      res.json(prompt);
+    } catch (error) {
+      console.error('Update prompt error:', error);
+      res.status(500).json({ message: 'Failed to update prompt' });
+    }
   }
 );
 
-// Delete prompt
+// Delete prompt with cache invalidation
 router.delete(
   "/:projectId/prompts/:promptId",
   assertProject,
   [param("promptId").isMongoId()],
+  invalidateCache(['prompts']),
   async (req, res) => {
-    const result = await Prompt.deleteOne({ _id: req.params.promptId, projectId: req.project._id, userId: req.user.id });
-    if (result.deletedCount === 0) return res.status(404).json({ message: "Prompt not found" });
-    res.json({ ok: true });
+    try {
+      const result = await Prompt.deleteOne({ 
+        _id: req.params.promptId, 
+        projectId: req.project._id, 
+        userId: req.user.id 
+      });
+      
+      if (result.deletedCount === 0) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+      
+      // Invalidate cache
+      await redisCache.invalidatePrompts(req.project._id);
+      
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('Delete prompt error:', error);
+      res.status(500).json({ message: 'Failed to delete prompt' });
+    }
   }
 );
 

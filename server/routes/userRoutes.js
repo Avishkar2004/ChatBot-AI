@@ -2,6 +2,7 @@ import { Router } from "express";
 import { body } from "express-validator";
 import { getCurrentUser, updateProfile, deleteAccount } from "../controllers/userController.js";
 import requireAuth from "../middleware/auth.js";
+import { apiCache, invalidateCache } from "../middleware/apiCache.js";
 
 const router = Router();
 
@@ -21,13 +22,20 @@ const emailUpdateRule = body("email")
 // All routes require authentication
 router.use(requireAuth);
 
-// Get current user profile
-router.get("/me", getCurrentUser);
+// Get current user profile with caching
+router.get("/me", apiCache({ ttl: 300 }), getCurrentUser);
 
-// Update user profile
-router.put("/me", [usernameUpdateRule, emailUpdateRule], updateProfile);
+// Update user profile with cache invalidation
+router.put("/me", 
+  [usernameUpdateRule, emailUpdateRule], 
+  invalidateCache(['user_profile']),
+  updateProfile
+);
 
-// Delete user account
-router.delete("/me", deleteAccount);
+// Delete user account with cache invalidation
+router.delete("/me", 
+  invalidateCache(['user_profile', 'user_projects']),
+  deleteAccount
+);
 
 export default router;
