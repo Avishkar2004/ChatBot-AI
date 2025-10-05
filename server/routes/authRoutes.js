@@ -27,5 +27,3 @@ router.post("/register", [usernameRule, emailRule, passwordRule], register);
 router.post("/login", [emailRule, passwordRule], login);
 
 export default router;
-
-

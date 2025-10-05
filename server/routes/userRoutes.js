@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { body } from "express-validator";
-import { getCurrentUser, updateProfile, deleteAccount } from "../controllers/userController.js";
+import {
+  getCurrentUser,
+  updateProfile,
+  deleteAccount,
+} from "../controllers/userController.js";
 import requireAuth from "../middleware/auth.js";
 import { apiCache, invalidateCache } from "../middleware/apiCache.js";
 
@@ -26,15 +30,17 @@ router.use(requireAuth);
 router.get("/me", apiCache({ ttl: 300 }), getCurrentUser);
 
 // Update user profile with cache invalidation
-router.put("/me", 
-  [usernameUpdateRule, emailUpdateRule], 
-  invalidateCache(['user_profile']),
+router.put(
+  "/me",
+  [usernameUpdateRule, emailUpdateRule],
+  invalidateCache(["user_profile"]),
   updateProfile
 );
 
 // Delete user account with cache invalidation
-router.delete("/me", 
-  invalidateCache(['user_profile', 'user_projects']),
+router.delete(
+  "/me",
+  invalidateCache(["user_profile", "user_projects"]),
   deleteAccount
 );
 

@@ -1,4 +1,4 @@
-import redisClient from '../config/redis.js';
+import redisClient from "../config/redis.js";
 
 class RedisCacheService {
   // Project caching
@@ -70,7 +70,7 @@ class RedisCacheService {
     const key = `chat_session:${sessionId}`;
     await redisClient.lpush(key, message);
     await redisClient.expire(key, ttl);
-    
+
     // Keep only last 100 messages to prevent memory issues
     await redisClient.ltrim(key, 0, 99);
     return true;
@@ -95,12 +95,12 @@ class RedisCacheService {
   async updateUserSession(userId, updates, ttl = 3600) {
     const key = `user_session:${userId}`;
     const existing = await redisClient.get(key);
-    
+
     if (existing) {
       const updated = { ...existing, ...updates };
       return await redisClient.set(key, updated, ttl);
     }
-    
+
     return await redisClient.set(key, updates, ttl);
   }
 
@@ -122,8 +122,8 @@ class RedisCacheService {
       metadata: {
         timestamp: Date.now(),
         ttl,
-        ...metadata
-      }
+        ...metadata,
+      },
     };
     return await redisClient.set(key, cacheData, ttl);
   }
@@ -142,18 +142,18 @@ class RedisCacheService {
         `api:user_projects:*`,
         `api:project:*`,
         `api:prompts:*`,
-        `api:user_profile:*`
+        `api:user_profile:*`,
       ];
-      
+
       for (const p of patterns) {
-        if (pattern === 'all' || p.includes(pattern)) {
+        if (pattern === "all" || p.includes(pattern)) {
           // This is a simplified version - in production you'd use SCAN
           console.log(`Would invalidate pattern: ${p}`);
         }
       }
       return true;
     } catch (error) {
-      console.error('Pattern invalidation error:', error);
+      console.error("Pattern invalidation error:", error);
       return false;
     }
   }
@@ -161,12 +161,12 @@ class RedisCacheService {
   // Cache warming for frequently accessed data
   async warmCache() {
     try {
-      console.log('Warming cache...');
+      console.log("Warming cache...");
       // This would pre-populate frequently accessed data
       // Implementation depends on your specific needs
       return true;
     } catch (error) {
-      console.error('Cache warming error:', error);
+      console.error("Cache warming error:", error);
       return false;
     }
   }
@@ -176,13 +176,13 @@ class RedisCacheService {
     const patterns = [
       `user_projects:${userId}`,
       `user_session:${userId}`,
-      `chat_session:*` // This would need to be more specific in production
+      `chat_session:*`, // This would need to be more specific in production
     ];
-    
+
     for (const pattern of patterns) {
       // Note: In production, you'd use SCAN to find matching keys
       // For now, we'll handle specific keys
-      if (pattern.includes('*')) {
+      if (pattern.includes("*")) {
         // Skip wildcard patterns for now
         continue;
       }
@@ -193,10 +193,10 @@ class RedisCacheService {
   // Health check
   async isHealthy() {
     try {
-      await this.set('health_check', 'ok', 10);
-      const result = await this.get('health_check');
-      await this.del('health_check');
-      return result === 'ok';
+      await this.set("health_check", "ok", 10);
+      const result = await this.get("health_check");
+      await this.del("health_check");
+      return result === "ok";
     } catch (error) {
       return false;
     }
@@ -206,18 +206,18 @@ class RedisCacheService {
   async getCacheStats() {
     try {
       const client = redisClient.getClient();
-      const info = await client.info('memory');
-      const keyspace = await client.info('keyspace');
-      
+      const info = await client.info("memory");
+      const keyspace = await client.info("keyspace");
+
       return {
         memory: info,
         keyspace: keyspace,
-        connected: redisClient.isConnected
+        connected: redisClient.isConnected,
       };
     } catch (error) {
       return {
         error: error.message,
-        connected: false
+        connected: false,
       };
     }
   }

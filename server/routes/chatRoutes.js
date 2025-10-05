@@ -29,7 +29,8 @@ router.post(
 
     const groq = new Groq({ apiKey });
     const userMessage = req.body.message;
-    const sessionId = req.body.sessionId || `${req.user.id}_${req.params.projectId}`;
+    const sessionId =
+      req.body.sessionId || `${req.user.id}_${req.params.projectId}`;
 
     // Get cached prompts or fetch from database
     let prompts = await redisCache.getCachedPrompts(project._id);
@@ -103,11 +104,17 @@ router.post(
       }
 
       const reply = completion.choices?.[0]?.message?.content?.trim() || "";
-      
+
       // Store conversation in Redis
-      await redisCache.addMessageToSession(sessionId, { role: "user", content: userMessage });
-      await redisCache.addMessageToSession(sessionId, { role: "assistant", content: reply });
-      
+      await redisCache.addMessageToSession(sessionId, {
+        role: "user",
+        content: userMessage,
+      });
+      await redisCache.addMessageToSession(sessionId, {
+        role: "assistant",
+        content: reply,
+      });
+
       return res.json({ reply, model, sessionId });
     } catch (e) {
       console.error("Groq chat error:", e?.response?.data || e.message || e);
