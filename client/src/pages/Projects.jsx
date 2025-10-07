@@ -13,20 +13,53 @@ const Projects = () => {
   const [error, setError] = useState('');
   const [editingProject, setEditingProject] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [listLoading, setListLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [sortBy, setSortBy] = useState('updatedAt');
+  const [sortDir, setSortDir] = useState('desc');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
 
   const load = async () => {
     setError('');
+    setListLoading(true);
     try {
       const data = await listProjects();
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch (e) {
-      setError(e.message);
+      setError(e.message || 'Failed to load projects');
+    } finally {
+      setListLoading(false);
     }
   };
 
   useEffect(() => {
     if (token) load();
   }, [token]);
+
+  // Derived: filter, sort, paginate
+  const filtered = items.filter((p) => {
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return (
+      p.name?.toLowerCase().includes(q) ||
+      p.description?.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredSorted = filtered.sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    if (sortBy === 'name') {
+      return a.name.localeCompare(b.name) * dir;
+    }
+    const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return (aTime - bTime) * dir;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredSorted.length / pageSize));
+  const start = (page - 1) * pageSize;
+  const paginated = filteredSorted.slice(start, start + pageSize);
 
   const onCreate = async (e) => {
     e.preventDefault();
@@ -75,7 +108,12 @@ const Projects = () => {
       setShowDeleteConfirm(null);
       await load();
     } catch (e) {
-      setError(e.message);
+      if (e?.response?.status === 404) {
+        setShowDeleteConfirm(null);
+        await load();
+      } else {
+        setError(e.message || 'Failed to delete project');
+      }
     } finally {
       setLoading(false);
     }
@@ -95,6 +133,51 @@ const Projects = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">My Projects</h1>
           <p className="text-gray-600 dark:text-gray-300">Create and manage your AI chatbot projects</p>
+        </div>
+
+        {/* Toolbar: Search, Sorting, Page size */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 mb-6 border border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+            <div className="flex-1">
+              <div className="relative">
+                <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+                <input
+                  type="text"
+                  className="w-full pl-10 pr-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="Search projects..."
+                  value={query}
+                  onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <select
+                className="px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+              >
+                <option value="updatedAt">Sort by: Last updated</option>
+                <option value="name">Sort by: Name</option>
+              </select>
+              <select
+                className="px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none"
+                value={sortDir}
+                onChange={(e) => setSortDir(e.target.value)}
+              >
+                <option value="desc">Desc</option>
+                <option value="asc">Asc</option>
+              </select>
+              <select
+                className="px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none"
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+              >
+                <option value={6}>6 / page</option>
+                <option value={9}>9 / page</option>
+                <option value={12}>12 / page</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Create/Edit Form */}
@@ -182,25 +265,36 @@ const Projects = () => {
 
         {/* Projects Grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {items.length === 0 ? (
+          {listLoading && (
+            Array.from({ length: pageSize }).map((_, idx) => (
+              <div key={`skeleton-${idx}`} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 animate-pulse">
+                <div className="h-5 w-1/2 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div>
+                <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mb-6"></div>
+                <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+            ))
+          )}
+          {!listLoading && filteredSorted.length === 0 ? (
             <div className="sm:col-span-2 lg:col-span-3 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center border border-gray-200 dark:border-gray-700">
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No projects yet</h3>
-              <p className="text-gray-500 dark:text-gray-400">Create your first AI project to get started</p>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No projects found</h3>
+              <p className="text-gray-500 dark:text-gray-400">Try adjusting your search or create a new project</p>
             </div>
           ) : (
-            items.map((project) => (
+            paginated.map((project) => (
               <div key={project._id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-200">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{project.name}</h3>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">
-                      {project.description || 'No description'}
-                    </p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">{project.description || 'No description'}</p>
+                    <div className="mt-2 text-xs text-gray-400">
+                      <span>Updated {project.updatedAt ? new Date(project.updatedAt).toLocaleString() : '—'}</span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -249,6 +343,34 @@ const Projects = () => {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {!listLoading && filteredSorted.length > 0 && (
+          <div className="flex items-center justify-between mt-6 text-sm text-gray-600 dark:text-gray-300">
+            <div>
+              Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filteredSorted.length)} of {filteredSorted.length}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <span>
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
