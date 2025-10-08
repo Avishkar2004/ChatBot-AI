@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent horizontal scrolling globally */
+html, body, #root {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Utility to forcibly hide horizontal overflow on any container */
+.overflow-x-hidden-important {
+  overflow-x: hidden !important;
+}
+
 /* Custom animations for Features component */
 @keyframes gradient {
   0%, 100% {

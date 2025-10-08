@@ -7,7 +7,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <AppRoutes />
+        <AppRoutes/>
       </BrowserRouter>
     </AuthProvider>
   );

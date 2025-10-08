@@ -53,7 +53,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'shadow-xl shadow-black/25 bg-white/95 dark:bg-gray-900/95' : 'bg-white/90 dark:bg-gray-900/90'} border-b border-gray-200 dark:border-gray-700 backdrop-blur-xl`}>
+    <nav className={`sticky overflow-hidden top-0 z-50 transition-all duration-300 ${scrolled ? 'shadow-xl shadow-black/25 bg-white/95 dark:bg-gray-900/95' : 'bg-white/90 dark:bg-gray-900/90'} border-b border-gray-200 dark:border-gray-700 backdrop-blur-xl`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           {/* Left: Logo */}
