@@ -521,7 +521,7 @@ This project is licensed under the ISC License.
 ![Home Page](./screenshots/HomePage.png)
 
 ### Dashboard
-![Dashboard](./screenshots/dashboard.png)
+![Dashboard](./screenshots/Dashboard.png)
 
 ### Projects
 ![Projects List](./screenshots/projects.png)
