@@ -517,11 +517,17 @@ This project is licensed under the ISC License.
 
 ## 📸 Screenshots
 
-> Add screenshots of your app here:
-> - Home page
-> - Dashboard
-> - Project detail
-> - Chat interface
+### Home Page
+![Home Page](./screenshots/HomePage.png)
+
+### Dashboard
+![Dashboard](./screenshots/dashboard.png)
+
+### Projects
+![Projects List](./screenshots/projects.png)
+
+### Chat Interface
+![Chat Interface](./screenshots/chat.png)
 
 ---
 
