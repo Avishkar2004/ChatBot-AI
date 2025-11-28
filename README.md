@@ -531,5 +531,4 @@ This project is licensed under the ISC License.
 
 ---
 
-**⭐ If you find this project helpful, please give it a star!**
-
+**⭐ give it a star if you like it!**
