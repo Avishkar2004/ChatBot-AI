@@ -471,11 +471,10 @@ See [`feature roadmap.md`](./feature%20roadmap.md) for detailed future enhanceme
 - 🔐 RBAC + OAuth (Google/GitHub)
 - 📝 Prompt versioning and audit logs
 - 📄 RAG: Document upload + embeddings
-- 💳 Stripe billing + usage metering
 - 📊 Observability: Pino logs, Prometheus metrics
 - 🛠️ Admin dashboard
-- 📚 OpenAPI spec + SDK generation
-- 🧪 Testing + CI/CD
+- 📚 SDK generation
+
 
 ---
 
