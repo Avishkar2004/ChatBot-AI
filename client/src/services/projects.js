@@ -1,8 +1,12 @@
 import api, { API_ENDPOINTS } from "../config/api.js";
 
-export async function listProjects() {
+export async function listProjects(forceRefresh = false) {
   try {
-    const response = await api.get(API_ENDPOINTS.projects.list);
+    // Add cache-busting query parameter if force refresh is needed
+    const url = forceRefresh 
+      ? `${API_ENDPOINTS.projects.list}?_t=${Date.now()}`
+      : API_ENDPOINTS.projects.list;
+    const response = await api.get(url);
     return response.data;
   } catch (error) {
     console.error("Failed to fetch projects:", error);

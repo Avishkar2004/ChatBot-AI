@@ -20,11 +20,11 @@ const Projects = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
 
-  const load = async () => {
+  const load = async (forceRefresh = false) => {
     setError('');
     setListLoading(true);
     try {
-      const data = await listProjects();
+      const data = await listProjects(forceRefresh);
       setItems(Array.isArray(data) ? data : []);
     } catch (e) {
       setError(e.message || 'Failed to load projects');
@@ -66,12 +66,37 @@ const Projects = () => {
     setLoading(true);
     setError('');
     try {
-      await createProject({ name, description });
+      const newProject = await createProject({ name, description });
+      console.log('Created project:', newProject);
       setName('');
       setDescription('');
-      await load();
+
+      // Optimistically add the new project to the list immediately
+      if (newProject && newProject._id) {
+        setItems((prevItems) => {
+          // Check if project already exists to avoid duplicates
+          const exists = prevItems.some(p => p._id === newProject._id);
+          if (exists) {
+            console.log('Project already in list, skipping duplicate');
+            return prevItems;
+          }
+          console.log('Adding project to list optimistically');
+          return [newProject, ...prevItems];
+        });
+      } else {
+        console.warn('Created project missing _id:', newProject);
+      }
+
+      // Wait a bit for cache invalidation to complete, then force refresh
+      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('Refreshing project list...');
+      await load(true); // Force refresh with cache-busting
+      console.log('Project list refreshed');
     } catch (e) {
+      console.error('Error creating project:', e);
       setError(e.message);
+      // If creation failed, reload to ensure consistency
+      await load(true);
     } finally {
       setLoading(false);
     }
@@ -88,13 +113,24 @@ const Projects = () => {
     setLoading(true);
     setError('');
     try {
-      await updateProject(editingProject._id, { name, description });
+      const updatedProject = await updateProject(editingProject._id, { name, description });
       setEditingProject(null);
       setName('');
       setDescription('');
-      await load();
+
+      // Optimistically update the project in the list
+      if (updatedProject && updatedProject._id) {
+        setItems((prevItems) =>
+          prevItems.map((p) => (p._id === updatedProject._id ? updatedProject : p))
+        );
+      }
+
+      // Wait a bit for cache invalidation, then force refresh
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await load(true);
     } catch (e) {
       setError(e.message);
+      await load(true);
     } finally {
       setLoading(false);
     }
@@ -106,13 +142,22 @@ const Projects = () => {
     try {
       await deleteProject(projectId);
       setShowDeleteConfirm(null);
-      await load();
+
+      // Optimistically remove the project from the list
+      setItems((prevItems) => prevItems.filter((p) => p._id !== projectId));
+
+      // Wait a bit for cache invalidation, then force refresh
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await load(true);
     } catch (e) {
       if (e?.response?.status === 404) {
         setShowDeleteConfirm(null);
-        await load();
+        // Project already deleted, just remove from list
+        setItems((prevItems) => prevItems.filter((p) => p._id !== projectId));
+        await load(true);
       } else {
         setError(e.message || 'Failed to delete project');
+        await load(true);
       }
     } finally {
       setLoading(false);
@@ -140,7 +185,7 @@ const Projects = () => {
           <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
             <div className="flex-1">
               <div className="relative">
-                <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+                <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
                 <input
                   type="text"
                   className="w-full pl-10 pr-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
