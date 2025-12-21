@@ -6,10 +6,30 @@ export async function listProjects(forceRefresh = false) {
     const url = forceRefresh 
       ? `${API_ENDPOINTS.projects.list}?_t=${Date.now()}`
       : API_ENDPOINTS.projects.list;
+    
     const response = await api.get(url);
-    return response.data;
+    
+    // Ensure we return an array
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return data;
+    }
+    
+    // Handle wrapped responses
+    if (data && Array.isArray(data.projects)) {
+      return data.projects;
+    }
+    
+    if (data && Array.isArray(data.data)) {
+      return data.data;
+    }
+    
+    // If it's not an array, return empty array or wrap single object
+    return Array.isArray(data) ? data : (data ? [data] : []);
   } catch (error) {
-    console.error("Failed to fetch projects:", error);
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
     throw error;
   }
 }

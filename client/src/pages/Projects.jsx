@@ -25,16 +25,33 @@ const Projects = () => {
     setListLoading(true);
     try {
       const data = await listProjects(forceRefresh);
-      setItems(Array.isArray(data) ? data : []);
+      
+      // Handle different response formats
+      let projects = [];
+      if (Array.isArray(data)) {
+        projects = data;
+      } else if (data && Array.isArray(data.projects)) {
+        projects = data.projects;
+      } else if (data && data.data && Array.isArray(data.data)) {
+        projects = data.data;
+      } else if (data && typeof data === 'object') {
+        // If it's a single project object, wrap it in an array
+        projects = [data];
+      }
+      
+      setItems(projects);
     } catch (e) {
       setError(e.message || 'Failed to load projects');
+      setItems([]); // Clear items on error
     } finally {
       setListLoading(false);
     }
   };
 
   useEffect(() => {
-    if (token) load();
+    if (token) {
+      load(true); // Force refresh on mount to ensure we get latest data
+    }
   }, [token]);
 
   // Derived: filter, sort, paginate
@@ -67,7 +84,6 @@ const Projects = () => {
     setError('');
     try {
       const newProject = await createProject({ name, description });
-      console.log('Created project:', newProject);
       setName('');
       setDescription('');
 
@@ -77,23 +93,16 @@ const Projects = () => {
           // Check if project already exists to avoid duplicates
           const exists = prevItems.some(p => p._id === newProject._id);
           if (exists) {
-            console.log('Project already in list, skipping duplicate');
             return prevItems;
           }
-          console.log('Adding project to list optimistically');
           return [newProject, ...prevItems];
         });
-      } else {
-        console.warn('Created project missing _id:', newProject);
       }
 
       // Wait a bit for cache invalidation to complete, then force refresh
-      await new Promise(resolve => setTimeout(resolve, 500));
-      console.log('Refreshing project list...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
       await load(true); // Force refresh with cache-busting
-      console.log('Project list refreshed');
     } catch (e) {
-      console.error('Error creating project:', e);
       setError(e.message);
       // If creation failed, reload to ensure consistency
       await load(true);
@@ -175,9 +184,27 @@ const Projects = () => {
     <Page>
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">My Projects</h1>
-          <p className="text-gray-600 dark:text-gray-300">Create and manage your AI chatbot projects</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">My Projects</h1>
+            <p className="text-gray-600 dark:text-gray-300">Create and manage your AI chatbot projects</p>
+          </div>
+          <button
+            onClick={() => load(true)}
+            disabled={listLoading}
+            className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all disabled:opacity-50 flex items-center gap-2"
+            title="Refresh projects"
+          >
+            <svg 
+              className={`w-5 h-5 ${listLoading ? 'animate-spin' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
         </div>
 
         {/* Toolbar: Search, Sorting, Page size */}
@@ -327,8 +354,26 @@ const Projects = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No projects found</h3>
-              <p className="text-gray-500 dark:text-gray-400">Try adjusting your search or create a new project</p>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                {items.length === 0 && query.trim() === '' 
+                  ? 'No projects yet' 
+                  : 'No projects found'}
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
+                {items.length === 0 && query.trim() === ''
+                  ? 'Create your first project to get started'
+                  : query.trim() 
+                    ? 'Try adjusting your search or create a new project'
+                    : 'Try refreshing or create a new project'}
+              </p>
+              {items.length === 0 && query.trim() === '' && (
+                <button
+                  onClick={() => document.querySelector('input[type="text"]')?.focus()}
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white rounded-xl hover:from-emerald-700 hover:to-blue-700 transition-all"
+                >
+                  Create Your First Project
+                </button>
+              )}
             </div>
           ) : (
             paginated.map((project) => (
