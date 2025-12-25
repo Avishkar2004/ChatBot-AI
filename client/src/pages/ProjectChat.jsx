@@ -61,9 +61,9 @@ const ProjectChat = () => {
   };
 
   const quickActions = [
-    { text: "Hello! How are you?", icon: "👋" },
-    { text: "What can you help me with?", icon: "💡" },
-    { text: "Tell me a joke", icon: "😄" }
+    { text: "Hello! How are you?", icon: "" },
+    { text: "What can you help me with?", icon: "" },
+    { text: "Tell me a joke", icon: "" }
   ];
 
   return (

@@ -1,4 +1,4 @@
-# 🤖 Chatbot AI Platform
+# Chatbot AI Platform
 
 A production-ready, full-stack multi-project AI chatbot platform that enables users to create custom AI assistants with project-specific prompts and context. Built with modern web technologies and enterprise-grade architecture featuring secure authentication, intelligent caching, and scalable LLM integration.
 
@@ -10,7 +10,7 @@ A production-ready, full-stack multi-project AI chatbot platform that enables us
 
 ---
 
-## 🎯 Overview
+## Overview
 
 Chatbot AI is a sophisticated platform that allows users to:
 - **Create multiple AI projects** with custom configurations
@@ -21,20 +21,20 @@ Chatbot AI is a sophisticated platform that allows users to:
 
 ### Key Features
 
-✅ **Multi-Project Architecture** – Organize AI assistants by project with isolated contexts  
-✅ **Secure Authentication** – JWT-based auth with protected routes and middleware  
-✅ **Intelligent Caching** – Redis-backed API caching, prompt caching, and session storage  
-✅ **Rate Limiting** – Per-user chat limits to control costs and prevent abuse  
-✅ **LLM Integration** – Groq SDK with model fallback and error handling  
-✅ **Prompt Management** – Create, update, and organize prompts per project  
-✅ **Chat History** – Redis-stored conversation context (last 10 messages)  
-✅ **Health Monitoring** – Startup checks and health endpoints for MongoDB/Redis  
-✅ **Responsive UI** – Modern, clean interface with Tailwind CSS and animations  
-✅ **Production Ready** – CORS hardening, validation, structured error handling  
+- **Multi-Project Architecture** – Organize AI assistants by project with isolated contexts  
+- **Secure Authentication** – JWT-based auth with protected routes and middleware  
+- **Intelligent Caching** – Redis-backed API caching, prompt caching, and session storage  
+- **Rate Limiting** – Per-user chat limits to control costs and prevent abuse  
+- **LLM Integration** – Groq SDK with model fallback and error handling  
+- **Prompt Management** – Create, update, and organize prompts per project  
+- **Chat History** – Redis-stored conversation context (last 10 messages)  
+- **Health Monitoring** – Startup checks and health endpoints for MongoDB/Redis  
+- **Responsive UI** – Modern, clean interface with Tailwind CSS and animations  
+- **Production Ready** – CORS hardening, validation, structured error handling  
 
 ---
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 ### Frontend
 - **React 18** – Modern UI with hooks and Context API
@@ -63,7 +63,7 @@ Chatbot AI is a sophisticated platform that allows users to:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Chatbot AI/
@@ -136,7 +136,7 @@ Chatbot AI/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -242,47 +242,47 @@ npm start
 
 ---
 
-## 📡 API Endpoints
+## API Endpoints
 
 ### Authentication
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | `/api/auth/register` | Register new user | ❌ |
-| POST | `/api/auth/login` | Login and get JWT | ❌ |
-| GET | `/api/auth/me` | Get current user | ✅ |
+| POST | `/api/auth/register` | Register new user | No |
+| POST | `/api/auth/login` | Login and get JWT | No |
+| GET | `/api/auth/me` | Get current user | Yes |
 
 ### Projects
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/api/projects` | List user's projects | ✅ |
-| POST | `/api/projects` | Create new project | ✅ |
-| GET | `/api/projects/:id` | Get project details | ✅ |
-| PUT | `/api/projects/:id` | Update project | ✅ |
-| DELETE | `/api/projects/:id` | Delete project | ✅ |
+| GET | `/api/projects` | List user's projects | Yes |
+| POST | `/api/projects` | Create new project | Yes |
+| GET | `/api/projects/:id` | Get project details | Yes |
+| PUT | `/api/projects/:id` | Update project | Yes |
+| DELETE | `/api/projects/:id` | Delete project | Yes |
 
 ### Prompts
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/api/projects/:projectId/prompts` | List prompts | ✅ |
-| POST | `/api/projects/:projectId/prompts` | Create prompt | ✅ |
-| PUT | `/api/projects/:projectId/prompts/:promptId` | Update prompt | ✅ |
-| DELETE | `/api/projects/:projectId/prompts/:promptId` | Delete prompt | ✅ |
+| GET | `/api/projects/:projectId/prompts` | List prompts | Yes |
+| POST | `/api/projects/:projectId/prompts` | Create prompt | Yes |
+| PUT | `/api/projects/:projectId/prompts/:promptId` | Update prompt | Yes |
+| DELETE | `/api/projects/:projectId/prompts/:promptId` | Delete prompt | Yes |
 
 ### Chat
 | Method | Endpoint | Description | Auth | Rate Limit |
 |--------|----------|-------------|------|------------|
-| POST | `/api/projects/:projectId/chat` | Send message | ✅ | 10 req/min |
+| POST | `/api/projects/:projectId/chat` | Send message | Yes | 10 req/min |
 
 ### System
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/health` | Health check | ❌ |
-| GET | `/api/cache/stats` | Cache statistics | ❌ |
-| POST | `/api/cache/invalidate` | Clear cache | ❌ |
+| GET | `/health` | Health check | No |
+| GET | `/api/cache/stats` | Cache statistics | No |
+| POST | `/api/cache/invalidate` | Clear cache | No |
 
 ---
 
-## 🔐 Authentication Flow
+## Authentication Flow
 
 1. User registers via `/api/auth/register`
 2. User logs in via `/api/auth/login` → receives JWT token
@@ -293,7 +293,7 @@ npm start
 
 ---
 
-## 💬 Chat Flow
+## Chat Flow
 
 1. User navigates to `ProjectChat` page
 2. User types message and submits
@@ -311,7 +311,7 @@ npm start
 
 ---
 
-## ⚡ Caching Strategy
+## Caching Strategy
 
 ### Three-Layer Caching
 
@@ -337,7 +337,7 @@ npm start
 
 ---
 
-## 🛡️ Security Features
+## Security Features
 
 - **Password Hashing** – bcryptjs with salt rounds
 - **JWT Tokens** – Signed with secret, expiration enforced
@@ -350,7 +350,7 @@ npm start
 
 ---
 
-## 🎨 UI/UX Highlights
+## UI/UX Highlights
 
 - **Responsive Design** – Mobile-first with Tailwind breakpoints
 - **Smooth Animations** – Framer Motion page transitions, GSAP effects
@@ -362,7 +362,7 @@ npm start
 
 ---
 
-## 📊 Database Schema
+## Database Schema
 
 ### User
 ```javascript
@@ -400,7 +400,7 @@ npm start
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ### Manual API Testing
 
@@ -436,7 +436,7 @@ curl -X POST http://localhost:8080/api/projects/PROJECT_ID/chat \
 
 ---
 
-## 🚧 Troubleshooting
+## Troubleshooting
 
 ### MongoDB Connection Issues
 - Ensure MongoDB is running: `mongod` or check Atlas dashboard
@@ -463,22 +463,22 @@ curl -X POST http://localhost:8080/api/projects/PROJECT_ID/chat \
 
 ---
 
-## 🎯 Roadmap
+## Roadmap
 
 See [`feature roadmap.md`](./feature%20roadmap.md) for detailed future enhancements:
 
-- ✨ Real-time streaming with WebSockets
-- 🔐 RBAC + OAuth (Google/GitHub)
-- 📝 Prompt versioning and audit logs
-- 📄 RAG: Document upload + embeddings
-- 📊 Observability: Pino logs, Prometheus metrics
-- 🛠️ Admin dashboard
-- 📚 SDK generation
+- Real-time streaming with WebSockets
+- RBAC + OAuth (Google/GitHub)
+- Prompt versioning and audit logs
+- RAG: Document upload + embeddings
+- Observability: Pino logs, Prometheus metrics
+- Admin dashboard
+- SDK generation
 
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please follow these steps:
 
@@ -490,13 +490,13 @@ Contributions are welcome! Please follow these steps:
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the ISC License.
 
 ---
 
-## 👨‍💻 Author
+## Author
 
 **Avishkar Kakde**
 - GitHub: [@Avishkar2004](https://github.com/Avishkar2004)
@@ -504,7 +504,7 @@ This project is licensed under the ISC License.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [Groq](https://groq.com/) for fast LLM inference
 - [Redis Cloud](https://redis.com/cloud/) for managed caching
@@ -514,7 +514,7 @@ This project is licensed under the ISC License.
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 ### Home Page
 ![Home Page](./screenshots/HomePage.png)
@@ -530,4 +530,4 @@ This project is licensed under the ISC License.
 
 ---
 
-**⭐ give it a star if you like it!**
+**Give it a star if you like it!**

@@ -75,20 +75,20 @@ app.use(cacheStats);
 // Initialize all connections before starting server
 const initializeServer = async () => {
   try {
-    console.log("🚀 Initializing Chatbot AI Server...\n");
+    console.log("Initializing Chatbot AI Server...\n");
 
     // Connect to MongoDB
-    console.log("📊 Connecting to MongoDB...");
+    console.log("Connecting to MongoDB...");
     await connectDB();
-    console.log("✅ MongoDB connected successfully\n");
+    console.log("MongoDB connected successfully\n");
 
     // Connect to Redis
-    console.log("🔴 Connecting to Redis Cloud...");
+    console.log("Connecting to Redis Cloud...");
     await redisClient.connect();
-    console.log("✅ Redis Cloud connected successfully\n");
+    console.log("Redis Cloud connected successfully\n");
 
     // Test Redis connection
-    console.log("🧪 Testing Redis operations...");
+    console.log("Testing Redis operations...");
     try {
       // Test basic Redis operations
       await redisClient.set("test:health", "ok", 10);
@@ -96,26 +96,26 @@ const initializeServer = async () => {
       await redisClient.del("test:health");
 
       if (result === "ok") {
-        console.log("✅ Redis health check passed\n");
+        console.log("Redis health check passed\n");
       } else {
-        console.log("⚠️  Redis health check failed, but continuing...\n");
+        console.log("Redis health check failed, but continuing...\n");
       }
     } catch (error) {
-      console.log("⚠️  Redis health check failed:", error.message);
+      console.log("Redis health check failed:", error.message);
       console.log("   Continuing with limited functionality...\n");
     }
 
     // Start the server
-    console.log("🌐 Starting HTTP server...");
+    console.log("Starting HTTP server...");
     app.listen(PORT, () => {
-      console.log(`✅ Server is running on port ${PORT}`);
-      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-      console.log(`📊 Cache stats: http://localhost:${PORT}/api/cache/stats`);
-      console.log("\n🎉 Chatbot AI Server is ready!");
+      console.log(`Server is running on port ${PORT}`);
+      console.log(`Health check: http://localhost:${PORT}/health`);
+      console.log(`Cache stats: http://localhost:${PORT}/api/cache/stats`);
+      console.log("\nChatbot AI Server is ready!");
     });
   } catch (error) {
-    console.error("❌ Server initialization failed:", error);
-    console.log("\n🔧 Troubleshooting:");
+    console.error("Server initialization failed:", error);
+    console.log("\nTroubleshooting:");
     console.log("   1. Check MongoDB connection string");
     console.log("   2. Check Redis Cloud credentials");
     console.log("   3. Verify network connectivity");
