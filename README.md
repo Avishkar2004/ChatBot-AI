@@ -361,7 +361,6 @@ npm start
 - **Dark Mode Ready** – Tailwind classes prepared for theme toggle
 
 ---
-
 ## Database Schema
 
 ### User
