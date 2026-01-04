@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { getProject, sendChat } from '../services/projects.js';
+import { getProject, sendChat, getChatHistory, clearChatHistory } from '../services/projects.js';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ProjectChat = () => {
@@ -13,16 +13,46 @@ const ProjectChat = () => {
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const endRef = useRef(null);
   const textareaRef = useRef(null);
 
   useEffect(() => {
     const load = async () => {
+      setIsLoadingHistory(true);
       try {
         const p = await getProject(projectId);
         setProject(p);
+        // Load chat history
+        try {
+          const history = await getChatHistory(projectId);
+          if (history && history.messages && Array.isArray(history.messages)) {
+            // Parse messages if they're strings
+            const parsedMessages = history.messages.map(msg => {
+              if (typeof msg === 'string') {
+                try {
+                  return JSON.parse(msg);
+                } catch {
+                  return { role: 'user', content: msg };
+                }
+              }
+              return msg;
+            });
+            setMessages(parsedMessages);
+          } else {
+            setMessages([]);
+          }
+        } catch (historyError) {
+          // If history doesn't exist or fails, start with empty messages
+          console.log("No chat history found or error loading:", historyError.message);
+          setMessages([]);
+        }
       } catch (e) { 
         setError(e.message); 
+      } finally {
+        setIsLoadingHistory(false);
       }
     };
     if (token) load();
@@ -60,6 +90,21 @@ const ProjectChat = () => {
     }
   };
 
+  const handleClearChat = async () => {
+    setIsClearing(true);
+    setError('');
+    try {
+      await clearChatHistory(projectId);
+      setMessages([]);
+      setShowClearConfirm(false);
+      setError('');
+    } catch (e) {
+      setError(e.message || 'Failed to clear chat history');
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   const quickActions = [
     { text: "Hello! How are you?", icon: "" },
     { text: "What can you help me with?", icon: "" },
@@ -90,12 +135,23 @@ const ProjectChat = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
-              <div>
+              <div className="flex-1">
                 <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {project?.name || 'AI Assistant'}
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Online</p>
               </div>
+              {messages.length > 0 && (
+                <button
+                  onClick={() => setShowClearConfirm(true)}
+                  className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  title="Clear chat history"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -119,10 +175,61 @@ const ProjectChat = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Clear Chat Confirmation Modal */}
+      <AnimatePresence>
+        {showClearConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => !isClearing && setShowClearConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-xl border border-gray-200 dark:border-gray-700"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Clear Chat History?
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                This will permanently delete all messages in this conversation. This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  disabled={isClearing}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleClearChat}
+                  disabled={isClearing}
+                  className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {isClearing ? 'Clearing...' : 'Clear Chat'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto scroll-smooth">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-          {messages.length === 0 ? (
+          {isLoadingHistory ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mb-4"></div>
+                <p className="text-gray-500 dark:text-gray-400">Loading chat history...</p>
+              </div>
+            </div>
+          ) : messages.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

@@ -63,12 +63,24 @@ class RedisCacheService {
   async getCachedChatSession(sessionId, limit = 50) {
     const key = `chat_session:${sessionId}`;
     const messages = await redisClient.lrange(key, 0, limit - 1);
-    return messages.reverse(); // Redis lists are FIFO, reverse to get chronological order
+    // Parse JSON strings back to objects
+    return messages
+      .map((msg) => {
+        try {
+          return typeof msg === 'string' ? JSON.parse(msg) : msg;
+        } catch (e) {
+          // Handle legacy format or invalid JSON
+          return typeof msg === 'string' ? { role: 'user', content: msg } : msg;
+        }
+      })
+      .reverse(); // Redis lists are FIFO, reverse to get chronological order
   }
 
   async addMessageToSession(sessionId, message, ttl = 7200) {
     const key = `chat_session:${sessionId}`;
-    await redisClient.lpush(key, message);
+    // Store message as JSON string
+    const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
+    await redisClient.lpush(key, messageStr);
     await redisClient.expire(key, ttl);
 
     // Keep only last 100 messages to prevent memory issues

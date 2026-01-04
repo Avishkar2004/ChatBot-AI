@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { getProject, listPrompts, createPrompt } from '../services/projects.js';
+import { getProject, listPrompts, createPrompt, getPrompt, updatePrompt, deletePrompt } from '../services/projects.js';
 import Page from '../components/layout/Page.jsx';
 
 const ProjectDetail = () => {
@@ -19,6 +19,12 @@ const ProjectDetail = () => {
   const [filterQuery, setFilterQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest'); // newest | oldest | az | za
   const [expandedPromptId, setExpandedPromptId] = useState(null);
+  const [editingPromptId, setEditingPromptId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const TITLE_MAX = 60;
   const CONTENT_MAX = 600;
@@ -88,6 +94,81 @@ const ProjectDetail = () => {
       setTimeout(() => setCopiedPromptId(null), 1200);
     } catch (_) {
       // noop
+    }
+  };
+
+  const handleEditPrompt = async (promptId) => {
+    try {
+      const prompt = await getPrompt(projectId, promptId);
+      setEditingPromptId(promptId);
+      setEditTitle(prompt.title || '');
+      setEditContent(prompt.content || '');
+      setError('');
+      setSuccess('');
+    } catch (e) {
+      setError(e.message || 'Failed to load prompt for editing');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPromptId(null);
+    setEditTitle('');
+    setEditContent('');
+    setError('');
+  };
+
+  const handleUpdatePrompt = async (e) => {
+    e.preventDefault();
+    const trimmedTitle = editTitle.trim();
+    const trimmedContent = editContent.trim();
+
+    setError('');
+
+    // Validation
+    if (!trimmedTitle) {
+      setError('Please enter a title for your prompt.');
+      return;
+    }
+    if (!trimmedContent) {
+      setError('Please enter content for your prompt.');
+      return;
+    }
+    if (trimmedTitle.length > TITLE_MAX) {
+      setError(`Title must be ${TITLE_MAX} characters or less.`);
+      return;
+    }
+    if (trimmedContent.length > CONTENT_MAX) {
+      setError(`Content must be ${CONTENT_MAX} characters or less.`);
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await updatePrompt(projectId, editingPromptId, { title: trimmedTitle, content: trimmedContent });
+      setSuccess('Prompt updated successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+      handleCancelEdit();
+      await load();
+    } catch (e) {
+      setError(e.message || 'Failed to update prompt. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeletePrompt = async (promptId) => {
+    setIsDeleting(true);
+    setError('');
+    try {
+      await deletePrompt(projectId, promptId);
+      setSuccess('Prompt deleted successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+      setDeleteConfirmId(null);
+      await load();
+    } catch (e) {
+      setError(e.message || 'Failed to delete prompt. Please try again.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -310,54 +391,156 @@ const ProjectDetail = () => {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {visiblePrompts.map((pr) => (
                 <div key={pr._id} className="group relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-800 transition-all duration-200">
-                  <div className="p-6">
-                    {/* Copy Button */}
-                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        type="button"
-                        onClick={() => handleCopyPrompt(pr._id, pr.content)}
-                        className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-emerald-300 dark:hover:border-emerald-600 transition-colors"
-                      >
-                        {copiedPromptId === pr._id ? (
-                          <>
-                            <svg className="w-3.5 h-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  {editingPromptId === pr._id ? (
+                    // Edit Form
+                    <form onSubmit={handleUpdatePrompt} className="p-6">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Title
+                          </label>
+                          <input
+                            type="text"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value.slice(0, TITLE_MAX))}
+                            required
+                            disabled={isUpdating}
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                          />
+                          <div className="flex justify-between mt-1">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">Title</span>
+                            <span className="text-xs text-gray-400">{editTitle.length}/{TITLE_MAX}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Content
+                          </label>
+                          <textarea
+                            rows="4"
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value.slice(0, CONTENT_MAX))}
+                            required
+                            disabled={isUpdating}
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed resize-none"
+                          />
+                          <div className="flex justify-between mt-1">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">Content</span>
+                            <span className="text-xs text-gray-400">{editContent.length}/{CONTENT_MAX}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="submit"
+                            disabled={isUpdating || !editTitle.trim() || !editContent.trim()}
+                            className="flex-1 px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                          >
+                            {isUpdating ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            disabled={isUpdating}
+                            className="px-4 py-2 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  ) : (
+                    // Display Mode
+                    <div className="p-6">
+                      {/* Action Buttons */}
+                      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyPrompt(pr._id, pr.content)}
+                          className="inline-flex items-center px-2 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-emerald-300 dark:hover:border-emerald-600 transition-colors"
+                          title="Copy prompt"
+                        >
+                          {copiedPromptId === pr._id ? (
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                             </svg>
-                            Copied!
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-3.5 h-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          ) : (
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                               <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                               <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                             </svg>
-                            Copy
-                          </>
-                        )}
-                      </button>
-                    </div>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleEditPrompt(pr._id)}
+                          className="inline-flex items-center px-2 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+                          title="Edit prompt"
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirmId(pr._id)}
+                          className="inline-flex items-center px-2 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600 transition-colors"
+                          title="Delete prompt"
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
 
-                    {/* Prompt Content */}
-                    <div className="pr-16">
-                      <h4 className="text-gray-900 dark:text-white font-semibold text-base mb-3 line-clamp-1">
-                        {pr.title}
-                      </h4>
-                      <div className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
-                        <p className="whitespace-pre-line line-clamp-4">
-                          {expandedPromptId === pr._id ? pr.content : (pr.content?.length > 200 ? pr.content.slice(0, 200) + '…' : pr.content)}
-                        </p>
-                        {pr.content && pr.content.length > 200 && (
-                          <button
-                            type="button"
-                            onClick={() => setExpandedPromptId(expandedPromptId === pr._id ? null : pr._id)}
-                            className="mt-2 text-xs font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline transition-colors"
-                          >
-                            {expandedPromptId === pr._id ? 'Show less' : 'Show more'}
-                          </button>
-                        )}
+                      {/* Delete Confirmation */}
+                      {deleteConfirmId === pr._id && (
+                        <div className="absolute inset-0 bg-white dark:bg-gray-800 rounded-xl border-2 border-red-300 dark:border-red-700 p-4 z-10 flex flex-col justify-center items-center">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white mb-4 text-center">
+                            Are you sure you want to delete this prompt?
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePrompt(pr._id)}
+                              disabled={isDeleting}
+                              className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                              {isDeleting ? 'Deleting...' : 'Delete'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteConfirmId(null)}
+                              disabled={isDeleting}
+                              className="px-4 py-2 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Prompt Content */}
+                      <div className="pr-20">
+                        <h4 className="text-gray-900 dark:text-white font-semibold text-base mb-3 line-clamp-1">
+                          {pr.title}
+                        </h4>
+                        <div className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+                          <p className="whitespace-pre-line line-clamp-4">
+                            {expandedPromptId === pr._id ? pr.content : (pr.content?.length > 200 ? pr.content.slice(0, 200) + '…' : pr.content)}
+                          </p>
+                          {pr.content && pr.content.length > 200 && (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedPromptId(expandedPromptId === pr._id ? null : pr._id)}
+                              className="mt-2 text-xs font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline transition-colors"
+                            >
+                              {expandedPromptId === pr._id ? 'Show less' : 'Show more'}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -12,6 +12,31 @@ const router = Router();
 
 router.use(requireAuth);
 
+// GET chat history endpoint
+router.get(
+  "/:projectId/chat/history",
+  [param("projectId").isMongoId()],
+  async (req, res) => {
+    try {
+      const project = await Project.findOne({
+        _id: req.params.projectId,
+        userId: req.user.id,
+      });
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const sessionId = `${req.user.id}_${req.params.projectId}`;
+      const chatHistory = await redisCache.getCachedChatSession(sessionId, 100);
+
+      return res.json({ messages: chatHistory, sessionId });
+    } catch (e) {
+      console.error("Error fetching chat history:", e);
+      return res.status(500).json({ message: "Failed to fetch chat history", error: e.message });
+    }
+  }
+);
+
 router.post(
   "/:projectId/chat",
   [param("projectId").isMongoId(), body("message").isLength({ min: 1 })],
@@ -121,6 +146,31 @@ router.post(
       return res
         .status(500)
         .json({ message: "Groq request failed", error: e.message });
+    }
+  }
+);
+
+// DELETE chat history endpoint
+router.delete(
+  "/:projectId/chat/clear",
+  [param("projectId").isMongoId()],
+  async (req, res) => {
+    try {
+      const project = await Project.findOne({
+        _id: req.params.projectId,
+        userId: req.user.id,
+      });
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const sessionId = `${req.user.id}_${req.params.projectId}`;
+      await redisCache.clearChatSession(sessionId);
+
+      return res.json({ message: "Chat history cleared successfully" });
+    } catch (e) {
+      console.error("Error clearing chat history:", e);
+      return res.status(500).json({ message: "Failed to clear chat history", error: e.message });
     }
   }
 );
