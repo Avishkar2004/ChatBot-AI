@@ -78,8 +78,8 @@ const Features = () => {
   ];
 
   return (
-    <motion.section 
-      id="features" 
+    <motion.section
+      id="features"
       className="relative py-32 bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20 overflow-hidden"
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
@@ -88,7 +88,7 @@ const Features = () => {
     >
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <motion.div 
+        <motion.div
           className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-blue-400/20 rounded-full blur-3xl"
           animate={{
             x: [0, 30, 0],
@@ -101,7 +101,7 @@ const Features = () => {
             ease: "easeInOut"
           }}
         />
-        <motion.div 
+        <motion.div
           className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"
           animate={{
             x: [0, -30, 0],
@@ -115,7 +115,7 @@ const Features = () => {
             delay: 2
           }}
         />
-        <motion.div 
+        <motion.div
           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-blue-400/10 to-emerald-400/10 rounded-full blur-3xl"
           animate={{
             rotate: [0, 360],
@@ -131,14 +131,14 @@ const Features = () => {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Animated Header */}
-        <motion.div 
+        <motion.div
           className="text-center mb-20"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <motion.div 
+          <motion.div
             className="inline-flex items-center gap-3 px-6 py-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-emerald-700 dark:text-emerald-300 rounded-full text-sm font-semibold mb-8 border border-emerald-200 dark:border-emerald-800 shadow-lg"
             initial={{ scale: 0.8, opacity: 0 }}
             whileInView={{ scale: 1, opacity: 1 }}
@@ -146,20 +146,20 @@ const Features = () => {
             transition={{ duration: 0.6, delay: 0.4 }}
             whileHover={{ scale: 1.05 }}
           >
-            <motion.div 
+            <motion.div
               className="w-3 h-3 bg-emerald-500 rounded-full"
               animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
             <span>Powerful Features</span>
-            <motion.div 
+            <motion.div
               className="w-3 h-3 bg-emerald-500 rounded-full"
               animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
               transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
             />
           </motion.div>
-          
-          <motion.h2 
+
+          <motion.h2
             className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-8 leading-tight"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -168,7 +168,7 @@ const Features = () => {
           >
             Everything you need to build
             <br />
-            <motion.span 
+            <motion.span
               className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent"
               animate={{
                 backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
@@ -185,16 +185,16 @@ const Features = () => {
               intelligent AI agents
             </motion.span>
           </motion.h2>
-          
-          <motion.p 
+
+          <motion.p
             className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.8 }}
           >
-            Powerful tools and features designed to help you create, deploy, and manage AI chatbots that deliver 
-            <motion.span 
+            Powerful tools and features designed to help you create, deploy, and manage AI chatbots that deliver
+            <motion.span
               className="text-emerald-600 dark:text-emerald-400 font-semibold"
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 300 }}
@@ -205,7 +205,7 @@ const Features = () => {
         </motion.div>
 
         {/* Animated Features Grid */}
-        <motion.div 
+        <motion.div
           className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -219,7 +219,7 @@ const Features = () => {
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
               viewport={{ once: true }}
-              whileHover={{ 
+              whileHover={{
                 y: -8,
                 scale: 1.02,
                 transition: { type: "spring", stiffness: 300, damping: 20 }
@@ -228,7 +228,7 @@ const Features = () => {
                 y: [0, -5, 0],
               }}
               transition={{
-                duration: 0.6, 
+                duration: 0.6,
                 delay: 1.2 + (index * 0.1),
                 type: "spring",
                 stiffness: 100,
@@ -242,16 +242,16 @@ const Features = () => {
             >
               {/* Animated Background Gradient */}
               <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-10 rounded-3xl transition-all duration-500`}></div>
-              
+
               {/* Floating Elements */}
               <div className="absolute -top-2 -right-2 w-4 h-4 bg-gradient-to-br from-emerald-400 to-blue-400 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 animate-pulse"></div>
-              <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-700 animate-pulse" style={{animationDelay: '0.3s'}}></div>
-              
+              <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-700 animate-pulse" style={{ animationDelay: '0.3s' }}></div>
+
               {/* Animated Icon */}
-              <motion.div 
+              <motion.div
                 className={`relative w-16 h-16 ${feature.bgColor} rounded-3xl flex items-center justify-center mb-8 shadow-lg`}
-                whileHover={{ 
-                  scale: 1.1, 
+                whileHover={{
+                  scale: 1.1,
                   rotate: 5,
                   transition: { type: "spring", stiffness: 300 }
                 }}
@@ -267,7 +267,7 @@ const Features = () => {
                   }
                 }}
               >
-                <motion.div 
+                <motion.div
                   className={`${feature.iconColor}`}
                   whileHover={{ scale: 1.1 }}
                   transition={{ type: "spring", stiffness: 400 }}
@@ -275,7 +275,7 @@ const Features = () => {
                   {feature.icon}
                 </motion.div>
                 {/* Animated Icon Glow Effect */}
-                <motion.div 
+                <motion.div
                   className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 rounded-3xl blur-lg`}
                   whileHover={{ opacity: 0.2 }}
                   transition={{ duration: 0.3 }}
@@ -283,21 +283,21 @@ const Features = () => {
               </motion.div>
 
               {/* Animated Content */}
-              <motion.div 
+              <motion.div
                 className="relative"
                 initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 1.4 + (index * 0.1) }}
               >
-                <motion.h3 
+                <motion.h3
                   className="text-2xl font-bold text-gray-900 dark:text-white mb-4 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors duration-300"
                   whileHover={{ scale: 1.02 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
                   {feature.title}
                 </motion.h3>
-                <motion.p 
+                <motion.p
                   className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg"
                   initial={{ opacity: 0 }}
                   whileInView={{ opacity: 1 }}
@@ -309,29 +309,29 @@ const Features = () => {
               </motion.div>
 
               {/* Animated Hover Arrow */}
-              <motion.div 
+              <motion.div
                 className="absolute top-8 right-8"
                 initial={{ opacity: 0, scale: 0.8 }}
-                whileHover={{ 
-                  opacity: 1, 
+                whileHover={{
+                  opacity: 1,
                   scale: 1,
                   x: 5,
                   transition: { type: "spring", stiffness: 300 }
                 }}
                 transition={{ duration: 0.3 }}
               >
-                <motion.div 
+                <motion.div
                   className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full flex items-center justify-center shadow-lg"
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.1,
                     rotate: 5,
                     transition: { type: "spring", stiffness: 400 }
                   }}
                 >
-                  <motion.svg 
-                    className="w-5 h-5 text-white" 
-                    fill="none" 
-                    stroke="currentColor" 
+                  <motion.svg
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                     whileHover={{ x: 2 }}
                     transition={{ type: "spring", stiffness: 400 }}
@@ -342,11 +342,11 @@ const Features = () => {
               </motion.div>
 
               {/* Animated Bottom Accent Line */}
-              <motion.div 
+              <motion.div
                 className={`absolute bottom-0 left-8 right-8 h-1 bg-gradient-to-r ${feature.color} rounded-full`}
                 initial={{ opacity: 0, scaleX: 0 }}
-                whileHover={{ 
-                  opacity: 1, 
+                whileHover={{
+                  opacity: 1,
                   scaleX: 1,
                   transition: { type: "spring", stiffness: 300 }
                 }}
@@ -357,14 +357,14 @@ const Features = () => {
         </motion.div>
 
         {/* Animated Bottom CTA */}
-        <motion.div 
+        <motion.div
           className="text-center mt-24"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 2 }}
         >
-          <motion.div 
+          <motion.div
             className="relative bg-gradient-to-br from-white/80 via-emerald-50/80 to-blue-50/80 dark:from-gray-800/80 dark:via-emerald-900/20 dark:to-blue-900/20 backdrop-blur-xl rounded-3xl p-12 lg:p-16 border border-emerald-200/50 dark:border-emerald-800/50 shadow-2xl overflow-hidden"
             whileHover={{ scale: 1.02 }}
             transition={{ type: "spring", stiffness: 300 }}
@@ -375,30 +375,30 @@ const Features = () => {
               <div className="absolute top-10 right-10 w-32 h-32 bg-gradient-to-br from-emerald-400/30 to-blue-400/30 rounded-full blur-2xl"></div>
               <div className="absolute bottom-10 left-10 w-24 h-24 bg-gradient-to-br from-purple-400/30 to-pink-400/30 rounded-full blur-2xl"></div>
             </div>
-            
-            <motion.div 
+
+            <motion.div
               className="relative"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 2.2 }}
             >
-              <motion.div 
+              <motion.div
                 className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full text-sm font-semibold mb-6"
                 initial={{ scale: 0.8, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 2.3 }}
               >
-                <motion.div 
+                <motion.div
                   className="w-2 h-2 bg-emerald-500 rounded-full"
                   animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 />
                 Ready to get started?
               </motion.div>
-              
-              <motion.h3 
+
+              <motion.h3
                 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -406,7 +406,7 @@ const Features = () => {
                 transition={{ duration: 0.6, delay: 2.4 }}
               >
                 Join thousands of developers building
-                <motion.span 
+                <motion.span
                   className="bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent"
                   animate={{
                     backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
@@ -423,16 +423,16 @@ const Features = () => {
                   intelligent AI solutions
                 </motion.span>
               </motion.h3>
-              
-              <motion.p 
+
+              <motion.p
                 className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 2.5 }}
               >
-                Start building your AI chatbot today with our powerful platform. 
-                <motion.span 
+                Start building your AI chatbot today with our powerful platform.
+                <motion.span
                   className="text-emerald-600 dark:text-emerald-400 font-semibold"
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 300 }}
@@ -440,8 +440,8 @@ const Features = () => {
                   No credit card required
                 </motion.span>.
               </motion.p>
-              
-              <motion.div 
+
+              <motion.div
                 className="flex flex-col sm:flex-row gap-6 justify-center items-center"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -451,7 +451,7 @@ const Features = () => {
                 <motion.a
                   href="/signup"
                   className="group inline-flex items-center justify-center px-10 py-5 bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 text-white font-bold rounded-2xl shadow-2xl text-lg"
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.05,
                     y: -2,
                     boxShadow: "0 20px 40px rgba(16, 185, 129, 0.3)"
@@ -459,10 +459,10 @@ const Features = () => {
                   whileTap={{ scale: 0.95 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <motion.svg 
-                    className="mr-3 w-6 h-6" 
-                    fill="none" 
-                    stroke="currentColor" 
+                  <motion.svg
+                    className="mr-3 w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                     whileHover={{ rotate: 12 }}
                     transition={{ type: "spring", stiffness: 400 }}
@@ -470,10 +470,10 @@ const Features = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </motion.svg>
                   Start Building Free
-                  <motion.svg 
-                    className="ml-3 w-5 h-5" 
-                    fill="none" 
-                    stroke="currentColor" 
+                  <motion.svg
+                    className="ml-3 w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                     whileHover={{ x: 2 }}
                     transition={{ type: "spring", stiffness: 400 }}
@@ -481,11 +481,11 @@ const Features = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </motion.svg>
                 </motion.a>
-                
+
                 <motion.a
                   href="#pricing"
                   className="group inline-flex items-center justify-center px-10 py-5 bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white font-semibold rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg text-lg backdrop-blur-sm"
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.05,
                     y: -2,
                     borderColor: "rgb(16, 185, 129)",
@@ -494,10 +494,10 @@ const Features = () => {
                   whileTap={{ scale: 0.95 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <motion.svg 
-                    className="mr-3 w-5 h-5" 
-                    fill="none" 
-                    stroke="currentColor" 
+                  <motion.svg
+                    className="mr-3 w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                     whileHover={{ scale: 1.1 }}
                     transition={{ type: "spring", stiffness: 400 }}
@@ -507,9 +507,9 @@ const Features = () => {
                   View Pricing
                 </motion.a>
               </motion.div>
-              
+
               {/* Animated Trust Indicators */}
-              <motion.div 
+              <motion.div
                 className="mt-12 flex flex-wrap justify-center items-center gap-8 text-sm text-gray-500 dark:text-gray-400"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -518,10 +518,10 @@ const Features = () => {
               >
                 {[
                   "Free forever plan",
-                  "No credit card required", 
+                  "No credit card required",
                   "Enterprise security"
                 ].map((text, index) => (
-                  <motion.div 
+                  <motion.div
                     key={text}
                     className="flex items-center gap-2"
                     initial={{ opacity: 0, x: -20 }}
@@ -530,10 +530,10 @@ const Features = () => {
                     transition={{ duration: 0.6, delay: 2.8 + (index * 0.1) }}
                     whileHover={{ scale: 1.05 }}
                   >
-                    <motion.svg 
-                      className="w-5 h-5 text-emerald-500" 
-                      fill="none" 
-                      stroke="currentColor" 
+                    <motion.svg
+                      className="w-5 h-5 text-emerald-500"
+                      fill="none"
+                      stroke="currentColor"
                       viewBox="0 0 24 24"
                       whileHover={{ scale: 1.2, rotate: 5 }}
                       transition={{ type: "spring", stiffness: 400 }}

@@ -13,10 +13,10 @@ export const AuthProvider = ({ children }) => {
     const initializeAuth = async () => {
       const storedToken = localStorage.getItem('auth_token');
       const storedUser = localStorage.getItem('auth_user');
-      
+
       if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
         setToken(storedToken);
-        
+
         // If we have a token but no user, try to fetch user data
         if (!storedUser) {
           try {
@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
           localStorage.removeItem('auth_user');
         }
       }
-      
+
       setLoading(false);
     };
 
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Invalid token provided to login');
       return;
     }
-    
+
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem('auth_token', newToken);
@@ -73,13 +73,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('auth_user');
   };
 
-  const value = useMemo(() => ({ 
-    token, 
-    user, 
-    login, 
-    logout, 
+  const value = useMemo(() => ({
+    token,
+    user,
+    login,
+    logout,
     loading,
-    isAuthenticated: !!(token && token !== 'undefined' && token !== 'null' && user) 
+    isAuthenticated: !!(token && token !== 'undefined' && token !== 'null' && user)
   }), [token, user, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
