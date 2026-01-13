@@ -26,8 +26,8 @@ Chatbot AI is a sophisticated platform that allows users to:
 - **Intelligent Caching** – Redis-backed API caching, prompt caching, and session storage  
 - **Rate Limiting** – Per-user chat limits to control costs and prevent abuse  
 - **LLM Integration** – Groq SDK with model fallback and error handling  
-- **Prompt Management** – Create, update, and organize prompts per project  
-- **Chat History** – Redis-stored conversation context (last 10 messages)  
+- **Prompt Management** – Create, update, edit, and delete prompts per project  
+- **Chat History** – Persistent Redis-stored conversation history with retrieval and clear functionality  
 - **Health Monitoring** – Startup checks and health endpoints for MongoDB/Redis  
 - **Responsive UI** – Modern, clean interface with Tailwind CSS and animations  
 - **Production Ready** – CORS hardening, validation, structured error handling  
@@ -264,6 +264,7 @@ npm start
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
 | GET | `/api/projects/:projectId/prompts` | List prompts | Yes |
+| GET | `/api/projects/:projectId/prompts/:promptId` | Get single prompt | Yes |
 | POST | `/api/projects/:projectId/prompts` | Create prompt | Yes |
 | PUT | `/api/projects/:projectId/prompts/:promptId` | Update prompt | Yes |
 | DELETE | `/api/projects/:projectId/prompts/:promptId` | Delete prompt | Yes |
@@ -272,6 +273,8 @@ npm start
 | Method | Endpoint | Description | Auth | Rate Limit |
 |--------|----------|-------------|------|------------|
 | POST | `/api/projects/:projectId/chat` | Send message | Yes | 10 req/min |
+| GET | `/api/projects/:projectId/chat/history` | Get chat history | Yes | - |
+| DELETE | `/api/projects/:projectId/chat/clear` | Clear chat history | Yes | - |
 
 ### System
 | Method | Endpoint | Description | Auth |
@@ -296,18 +299,20 @@ npm start
 ## Chat Flow
 
 1. User navigates to `ProjectChat` page
-2. User types message and submits
-3. Client sends `POST /api/projects/:projectId/chat` with message
-4. Server:
+2. **Chat history is automatically loaded** from Redis on page load
+3. User types message and submits
+4. Client sends `POST /api/projects/:projectId/chat` with message
+5. Server:
    - Validates user owns project
    - Fetches cached prompts (or queries DB)
-   - Retrieves last 10 messages from Redis session
+   - Retrieves last 10 messages from Redis session for context
    - Constructs system prompt from project prompts
    - Calls Groq API with context
-   - Stores user message + assistant reply in Redis
+   - Stores user message + assistant reply in Redis (JSON format)
    - Returns reply to client
-5. Client displays assistant response
-6. Chat history persists in Redis for session continuity
+6. Client displays assistant response
+7. Chat history persists in Redis for session continuity (2 hour TTL, last 100 messages)
+8. User can **clear chat history** via DELETE endpoint or UI button
 
 ---
 
@@ -326,9 +331,12 @@ npm start
    - Speeds up chat requests
 
 3. **Session Cache** (`redisCache.getCachedChatSession`)
-   - Stores chat history per `sessionId`
-   - Keeps last 10 messages for context
-   - Expires after inactivity
+   - Stores chat history per `sessionId` in Redis
+   - Messages stored as JSON strings for proper parsing
+   - Keeps last 10 messages for LLM context
+   - Stores up to 100 messages per session
+   - TTL: 2 hours (7200 seconds)
+   - Supports retrieval via GET endpoint and clearing via DELETE endpoint
 
 ### Cache Invalidation
 - Manual: `POST /api/cache/invalidate`
@@ -356,9 +364,12 @@ npm start
 - **Smooth Animations** – Framer Motion page transitions, GSAP effects
 - **Component Library** – Reusable Button, Card, Input, Container
 - **Protected Routes** – Redirect to login if unauthenticated
-- **Loading States** – Skeleton loaders and spinners
-- **Error Handling** – User-friendly error messages
+- **Loading States** – Skeleton loaders and spinners for chat history and prompts
+- **Error Handling** – User-friendly error messages with retry options
 - **Dark Mode Ready** – Tailwind classes prepared for theme toggle
+- **Chat History Persistence** – Automatic loading of previous conversations
+- **Prompt Management** – Inline editing and deletion with confirmation dialogs
+- **Clear Chat** – One-click chat history clearing with confirmation modal
 
 ---
 ## Database Schema
@@ -431,6 +442,32 @@ curl -X POST http://localhost:8080/api/projects/PROJECT_ID/chat \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{"message":"Hello, how are you?"}'
+```
+
+**Get Chat History:**
+```bash
+curl -X GET http://localhost:8080/api/projects/PROJECT_ID/chat/history \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Clear Chat History:**
+```bash
+curl -X DELETE http://localhost:8080/api/projects/PROJECT_ID/chat/clear \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Update Prompt:**
+```bash
+curl -X PUT http://localhost:8080/api/projects/PROJECT_ID/prompts/PROMPT_ID \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"title":"Updated Title","content":"Updated content"}'
+```
+
+**Delete Prompt:**
+```bash
+curl -X DELETE http://localhost:8080/api/projects/PROJECT_ID/prompts/PROMPT_ID \
+  -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
 ---
