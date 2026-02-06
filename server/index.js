@@ -180,5 +180,3 @@ app.use((error, req, res, next) => {
         : error.message,
   });
 });
-
-// Server startup is now handled in initializeServer() function
