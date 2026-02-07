@@ -16,7 +16,6 @@ import chatRoutes from "./routes/chatRoutes.js";
 import cacheRoutes from "./routes/cacheRoutes.js";
 import morgan from "morgan";
 const PORT = process.env.PORT || 8080;
-
 const app = express();
 
 // Middleware
@@ -48,7 +47,6 @@ app.use(
       // Check against allowed origins
       if (allowedOrigins.includes(origin)) return callback(null, true);
 
-      console.log("CORS blocked origin:", origin);
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
