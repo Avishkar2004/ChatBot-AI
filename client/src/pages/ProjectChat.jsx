@@ -46,7 +46,7 @@ const ProjectChat = () => {
           }
         } catch (historyError) {
           // If history doesn't exist or fails, start with empty messages
-          console.log("No chat history found or error loading:", historyError.message);
+          // console.log("No chat history found or error loading:", historyError.message);
           setMessages([]);
         }
       } catch (e) { 
