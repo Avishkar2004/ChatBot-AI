@@ -114,10 +114,10 @@ const initializeServer = async () => {
   } catch (error) {
     console.error("Server initialization failed:", error);
     console.log("\nTroubleshooting:");
-    console.log("   1. Check MongoDB connection string");
-    console.log("   2. Check Redis Cloud credentials");
-    console.log("   3. Verify network connectivity");
-    console.log("   4. Check firewall settings");
+    console.log("\t1. Check MongoDB connection string");
+    console.log("\t2. Check Redis Cloud credentials");
+    console.log("\t3. Verify network connectivity");
+    console.log("\t4. Check firewall settings");
     process.exit(1);
   }
 };
