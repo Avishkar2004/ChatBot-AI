@@ -91,7 +91,8 @@ app.use(
 );
 
 // Ensure preflight requests always get handled early
-app.options("*", cors());
+// NOTE: Express/path-to-regexp versions can throw on "*" routes. Regex works reliably.
+app.options(/.*/, cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
