@@ -145,10 +145,12 @@ export async function deletePrompt(projectId, promptId) {
   }
 }
 
-export async function sendChat(projectId, message) {
+export async function sendChat(projectId, message, sessionId) {
   try {
     const response = await api.post(API_ENDPOINTS.chat.send(projectId), {
       message,
+      // optional: when provided, server will continue the same redis session
+      sessionId,
     });
     return response.data;
   } catch (error) {

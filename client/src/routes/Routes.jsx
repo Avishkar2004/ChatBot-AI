@@ -17,6 +17,11 @@ import ProjectChat from "../pages/ProjectChat.jsx";
 const AppRoutes = () => {
   const location = useLocation();
 
+  const hideNavbar = !!matchPath(
+    "/projects/:projectId/chat",
+    location.pathname
+  );
+
   const hideFooter =
     !!matchPath("/projects/:projectId/chat", location.pathname) ||
     (!!matchPath("/projects/:projectId", location.pathname) &&
@@ -24,7 +29,7 @@ const AppRoutes = () => {
 
   return (
     <>
-      <Navbar />
+      {!hideNavbar && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/signup" element={<Signup />} />

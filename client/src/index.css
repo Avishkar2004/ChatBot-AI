@@ -70,6 +70,53 @@ body {
   @apply bg-[#0b0f13] text-gray-100 antialiased;
 }
 
+/* Markdown rendering inside chat bubbles */
+.markdown :where(p, ul, ol, pre, blockquote, table) {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown :where(ul, ol) {
+  padding-left: 1.25rem;
+}
+
+.markdown :where(li) {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.markdown :where(blockquote) {
+  border-left: 3px solid rgba(16, 185, 129, 0.5);
+  padding-left: 0.75rem;
+  color: rgba(209, 213, 219, 0.95);
+}
+
+.markdown :where(hr) {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.markdown :where(table) {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 0.75rem;
+}
+
+.markdown :where(th, td) {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.5rem 0.6rem;
+  vertical-align: top;
+}
+
+.markdown :where(th) {
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 600;
+}
+
+.markdown :where(code) {
+  word-break: break-word;
+}
+
 /* Utility components */
 .glass {
   @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-xl;

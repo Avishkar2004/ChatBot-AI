@@ -1,8 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getProject, sendChat, getChatHistory, clearChatHistory } from '../services/projects.js';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
 
 const ProjectChat = () => {
   const { projectId } = useParams();
@@ -16,8 +19,19 @@ const ProjectChat = () => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [sessionId, setSessionId] = useState('');
   const endRef = useRef(null);
   const textareaRef = useRef(null);
+  const sendingRef = useRef(false);
+  const lastDraftRef = useRef('');
+
+  const mdPlugins = useMemo(
+    () => ({
+      remarkPlugins: [remarkGfm],
+      rehypePlugins: [rehypeHighlight],
+    }),
+    []
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -28,6 +42,7 @@ const ProjectChat = () => {
         // Load chat history
         try {
           const history = await getChatHistory(projectId);
+          if (history?.sessionId) setSessionId(history.sessionId);
           if (history && history.messages && Array.isArray(history.messages)) {
             // Parse messages if they're strings
             const parsedMessages = history.messages.map(msg => {
@@ -62,6 +77,8 @@ const ProjectChat = () => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' }); 
   }, [messages]);
 
+  const canSend = !!input.trim() && !isSending && !isLoadingHistory && !isClearing;
+
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
@@ -71,22 +88,62 @@ const ProjectChat = () => {
   }, [input]);
 
   const send = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || isSending) return;
-    
-    const userMsg = { role: 'user', content: input.trim() };
+    if (e?.preventDefault) e.preventDefault();
+
+    // Synchronous guard prevents double-send (Enter + click)
+    if (sendingRef.current) return;
+    if (!canSend) return;
+
+    const trimmed = input.trim();
+    const userMsg = { role: 'user', content: trimmed };
+    lastDraftRef.current = trimmed;
+
+    // Optimistic UI
     setMessages((m) => [...m, userMsg]);
     setInput('');
     setError('');
-    
+
+    sendingRef.current = true;
+    setIsSending(true);
+
     try {
-      setIsSending(true);
-      const { reply } = await sendChat(projectId, userMsg.content);
-      setMessages((m) => [...m, { role: 'assistant', content: reply }]);
-    } catch (e) {
-      setError(e.message);
+      const { reply, sessionId: sid } = await sendChat(
+        projectId,
+        userMsg.content,
+        sessionId || undefined
+      );
+      if (sid && sid !== sessionId) setSessionId(sid);
+      const safeReply =
+        typeof reply === 'string' && reply.trim()
+          ? reply
+          : 'I couldn’t generate a response this time. Please try again.';
+      setMessages((m) => [...m, { role: 'assistant', content: safeReply }]);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to send message. Please try again.';
+      setError(msg);
+
+      // Rollback optimistic user message and restore draft for editing/retry
+      setMessages((m) => {
+        const copy = [...m];
+        const last = copy[copy.length - 1];
+        if (last?.role === 'user' && last?.content === trimmed) copy.pop();
+        return copy;
+      });
+      setInput(lastDraftRef.current);
     } finally {
+      sendingRef.current = false;
       setIsSending(false);
+    }
+  };
+
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text || '');
+    } catch (_) {
+      // noop
     }
   };
 
@@ -96,6 +153,7 @@ const ProjectChat = () => {
     try {
       await clearChatHistory(projectId);
       setMessages([]);
+      setSessionId('');
       setShowClearConfirm(false);
       setError('');
     } catch (e) {
@@ -112,21 +170,21 @@ const ProjectChat = () => {
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="h-[100dvh] flex flex-col bg-[#0b0f13] text-gray-100 overflow-hidden">
       {/* Header */}
       <motion.div 
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="sticky top-0 z-20 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200/50 dark:border-gray-700/50"
+        className="sticky top-0 z-20 bg-[#0b0f13]/70 backdrop-blur-xl border-b border-white/10"
       >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate(-1)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/5 rounded-lg transition-colors"
               >
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-gray-200/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
@@ -136,15 +194,15 @@ const ProjectChat = () => {
                 </svg>
               </div>
               <div className="flex-1">
-                <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h1 className="text-lg font-semibold text-white">
                   {project?.name || 'AI Assistant'}
                 </h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Online</p>
+                <p className="text-xs text-gray-400">Online</p>
               </div>
               {messages.length > 0 && (
                 <button
                   onClick={() => setShowClearConfirm(true)}
-                  className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  className="p-2 text-gray-300/80 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
                   title="Clear chat history"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,11 +224,11 @@ const ProjectChat = () => {
             exit={{ opacity: 0, y: -10 }}
             className="max-w-3xl mx-auto px-4 sm:px-6 pt-3"
           >
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 flex items-center gap-2">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-center gap-2">
               <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-red-700 dark:text-red-400 text-sm">{error}</span>
+              <span className="text-red-200 text-sm">{error}</span>
             </div>
           </motion.div>
         )}
@@ -183,7 +241,7 @@ const ProjectChat = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => !isClearing && setShowClearConfirm(false)}
           >
             <motion.div
@@ -191,19 +249,19 @@ const ProjectChat = () => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-xl border border-gray-200 dark:border-gray-700"
+              className="bg-[#0f1720] rounded-2xl p-6 max-w-md w-full shadow-2xl border border-white/10"
             >
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold text-white mb-2">
                 Clear Chat History?
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              <p className="text-sm text-gray-300/80 mb-6">
                 This will permanently delete all messages in this conversation. This action cannot be undone.
               </p>
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setShowClearConfirm(false)}
                   disabled={isClearing}
-                  className="px-4 py-2 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="px-4 py-2 text-gray-200/90 font-medium rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   Cancel
                 </button>
@@ -226,7 +284,7 @@ const ProjectChat = () => {
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mb-4"></div>
-                <p className="text-gray-500 dark:text-gray-400">Loading chat history...</p>
+                <p className="text-gray-400">Loading chat history...</p>
               </div>
             </div>
           ) : messages.length === 0 ? (
@@ -246,8 +304,8 @@ const ProjectChat = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </motion.div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">How can I help you?</h2>
-              <p className="text-gray-500 dark:text-gray-400 text-center mb-8 max-w-md">
+              <h2 className="text-2xl font-bold text-white mb-2">How can I help you?</h2>
+              <p className="text-gray-400 text-center mb-8 max-w-md">
                 Start a conversation with your AI assistant
               </p>
               <div className="flex flex-wrap gap-2 justify-center">
@@ -258,7 +316,7 @@ const ProjectChat = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.3 + idx * 0.1 }}
                     onClick={() => setInput(action.text)}
-                    className="px-4 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all text-sm font-medium flex items-center gap-2 shadow-sm hover:shadow"
+                    className="px-4 py-2.5 bg-white/5 text-gray-200 rounded-xl border border-white/10 hover:border-emerald-400/50 hover:bg-emerald-500/10 transition-all text-sm font-medium flex items-center gap-2 shadow-sm hover:shadow"
                   >
                     <span>{action.icon}</span>
                     <span>{action.text}</span>
@@ -275,7 +333,7 @@ const ProjectChat = () => {
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.3 }}
-                    className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`group flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {m.role === 'assistant' && (
                       <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
@@ -288,11 +346,71 @@ const ProjectChat = () => {
                       <div className={`rounded-2xl px-4 py-3 shadow-sm ${
                         m.role === 'user'
                           ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-br-sm'
-                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-bl-sm'
+                          : 'bg-white/5 text-gray-100 border border-white/10 rounded-bl-sm'
                       }`}>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.content}</p>
+                        {m.role === 'assistant' ? (
+                          <div className="relative">
+                            <div className="markdown text-sm leading-relaxed break-words">
+                              <ReactMarkdown
+                                remarkPlugins={mdPlugins.remarkPlugins}
+                                rehypePlugins={mdPlugins.rehypePlugins}
+                                components={{
+                                  a: ({ href, children, ...props }) => (
+                                    <a
+                                      href={href}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-emerald-600 dark:text-emerald-400 hover:underline"
+                                      {...props}
+                                    >
+                                      {children}
+                                    </a>
+                                  ),
+                                  code: ({ inline, className, children, ...props }) => {
+                                    const isInline = inline || !className;
+                                    if (isInline) {
+                                      return (
+                                        <code
+                                          className="px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 font-mono text-[0.9em]"
+                                          {...props}
+                                        >
+                                          {children}
+                                        </code>
+                                      );
+                                    }
+                                    return (
+                                      <code className={className} {...props}>
+                                        {children}
+                                      </code>
+                                    );
+                                  },
+                                  pre: ({ children }) => (
+                                    <pre className="rounded-xl overflow-x-auto bg-black/60 text-gray-100 p-3 border border-white/10">
+                                      {children}
+                                    </pre>
+                                  ),
+                                }}
+                              >
+                                {m.content || ''}
+                              </ReactMarkdown>
+                            </div>
+
+                            {!!m.content && (
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(m.content)}
+                                className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2 py-1 rounded-lg bg-black/70 text-white shadow-lg border border-white/10 hover:bg-black/80"
+                                title="Copy"
+                              >
+                                Copy
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.content}</p>
+                        )}
                       </div>
-                      <p className={`text-xs text-gray-400 dark:text-gray-500 mt-1.5 px-1 ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
+                      <p className={`text-xs text-gray-400 mt-1.5 px-1 ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
                         {m.role === 'user' ? 'You' : 'AI'}
                       </p>
                     </div>
@@ -318,7 +436,7 @@ const ProjectChat = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                     </svg>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+                  <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
                     <div className="flex items-center gap-2">
                       <div className="flex gap-1">
                         <motion.div
@@ -337,7 +455,7 @@ const ProjectChat = () => {
                           transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
                         />
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">AI is typing...</span>
+                      <span className="text-xs text-gray-400">AI is typing...</span>
                     </div>
                   </div>
                 </motion.div>
@@ -352,7 +470,7 @@ const ProjectChat = () => {
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="sticky bottom-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-t border-gray-200/50 dark:border-gray-700/50 shadow-lg"
+        className="sticky bottom-0 bg-[#0b0f13]/70 backdrop-blur-xl border-t border-white/10 shadow-2xl shadow-black/30"
       >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
           <form onSubmit={send} className="relative">
@@ -363,10 +481,18 @@ const ProjectChat = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Type your message..."
-                  className="w-full px-4 py-3 pr-12 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white rounded-2xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none min-h-[48px] max-h-32 shadow-sm transition-all"
+                  className={[
+                    "w-full px-4 py-3 pr-12 bg-white/5 text-gray-100 placeholder-gray-400 rounded-2xl border border-white/10",
+                    "focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-transparent",
+                    "resize-none min-h-[48px] max-h-32 shadow-sm transition-all",
+                    // Hide scrollbar when empty; allow scroll only after it reaches max height
+                    input.trim().length === 0 ? "overflow-hidden" : "overflow-y-auto",
+                  ].join(" ")}
                   rows="1"
-                  disabled={isSending}
+                  disabled={isSending || isLoadingHistory || isClearing}
                   onKeyDown={(e) => {
+                    // Avoid sending while IME composing (important for some keyboards/languages)
+                    if (e.isComposing) return;
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       send(e);
@@ -375,7 +501,8 @@ const ProjectChat = () => {
                 />
                 <button
                   type="submit"
-                  disabled={isSending || !input.trim()}
+                  disabled={!canSend}
+                  aria-label="Send message"
                   className="absolute right-2 bottom-2 p-2 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg active:scale-95"
                 >
                   {isSending ? (
@@ -391,8 +518,8 @@ const ProjectChat = () => {
                 </button>
               </div>
             </div>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 px-1">
-              Press <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> to send, <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Shift+Enter</kbd> for new line
+            <p className="text-xs text-gray-400 mt-2 px-1">
+              Press <kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-xs">Enter</kbd> to send, <kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-xs">Shift+Enter</kbd> for new line
             </p>
           </form>
         </div>
