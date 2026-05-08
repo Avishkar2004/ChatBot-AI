@@ -31,22 +31,47 @@ const allowedOrigins = (
     "https://chat-bot-ai-v6fl.vercel.app",
     "http://localhost:3000",
   ]
-).map((o) => o.trim());
+)
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+// Optional regex to allow dynamic preview/prod domains (ex: Vercel previews)
+const allowedOriginRegexes = (process.env.CLIENT_ORIGIN_REGEXES?.split(",") || [])
+  .map((s) => s.trim())
+  .filter(Boolean)
+  .map((pattern) => {
+    try {
+      return new RegExp(pattern);
+    } catch {
+      console.warn("Invalid CLIENT_ORIGIN_REGEXES pattern:", pattern);
+      return null;
+    }
+  })
+  .filter(Boolean);
+
+// Safe default: allow your Vercel project deploys even if CLIENT_ORIGINS is misconfigured
+// (ex: https://chat-bot-ai-<hash>.vercel.app)
+const vercelProjectOrigin = /^https:\/\/chat-bot-ai-[a-z0-9-]+\.vercel\.app$/i;
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+
+  // Allow localhost on any port for development
+  if (origin.includes("localhost") || origin.includes("127.0.0.1")) return true;
+
+  if (allowedOrigins.includes(origin)) return true;
+  if (vercelProjectOrigin.test(origin)) return true;
+  if (allowedOriginRegexes.some((re) => re.test(origin))) return true;
+
+  return false;
+};
 
 app.use(
   cors({
     origin: function (origin, callback) {
       // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-
-      // Allow localhost on any port for development
-      if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
-        return callback(null, true);
-      }
-
-      // Check against allowed origins
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-
+      if (isAllowedOrigin(origin)) return callback(null, true);
+      console.warn("CORS blocked origin:", origin, "Allowed:", allowedOrigins);
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
@@ -64,6 +89,9 @@ app.use(
     preflightContinue: false,
   })
 );
+
+// Ensure preflight requests always get handled early
+app.options("*", cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
