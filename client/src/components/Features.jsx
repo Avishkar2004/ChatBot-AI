@@ -80,7 +80,7 @@ const Features = () => {
   return (
     <motion.section
       id="features"
-      className="relative py-32 bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20 overflow-hidden"
+      className="relative py-32 bg-surface overflow-hidden"
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true }}
@@ -139,7 +139,7 @@ const Features = () => {
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           <motion.div
-            className="inline-flex items-center gap-3 px-6 py-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-emerald-700 dark:text-emerald-300 rounded-full text-sm font-semibold mb-8 border border-emerald-200 dark:border-emerald-800 shadow-lg"
+            className="inline-flex items-center gap-3 px-6 py-3 bg-white/80 dark:bg-surface-elevated/80 backdrop-blur-sm text-emerald-700 dark:text-emerald-300 rounded-full text-sm font-semibold mb-8 border border-emerald-200 dark:border-emerald-800 shadow-lg"
             initial={{ scale: 0.8, opacity: 0 }}
             whileInView={{ scale: 1, opacity: 1 }}
             viewport={{ once: true }}
@@ -215,7 +215,7 @@ const Features = () => {
           {features.map((feature, index) => (
             <motion.div
               key={index}
-              className="group relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 lg:p-10 border border-gray-200/50 dark:border-gray-700/50 hover:border-gray-300/50 dark:hover:border-gray-600/50 hover:shadow-2xl hover:shadow-gray-200/20 dark:hover:shadow-gray-900/20 transition-all duration-500"
+              className="group relative bg-white/70 dark:bg-surface-elevated/70 backdrop-blur-sm rounded-3xl p-8 lg:p-10 border border-gray-200/50 dark:border-gray-700/50 hover:border-gray-300/50 dark:hover:border-gray-600/50 hover:shadow-2xl hover:shadow-gray-200/20 dark:hover:shadow-gray-900/20 transition-all duration-500"
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
               viewport={{ once: true }}
@@ -484,7 +484,7 @@ const Features = () => {
 
                 <motion.a
                   href="#pricing"
-                  className="group inline-flex items-center justify-center px-10 py-5 bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white font-semibold rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg text-lg backdrop-blur-sm"
+                  className="group inline-flex items-center justify-center px-10 py-5 bg-white/80 dark:bg-surface-elevated/80 text-gray-900 dark:text-white font-semibold rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg text-lg backdrop-blur-sm"
                   whileHover={{
                     scale: 1.05,
                     y: -2,

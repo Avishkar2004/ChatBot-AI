@@ -194,7 +194,7 @@ const ProjectDetail = () => {
     <Page>
       <div className="max-w-5xl mx-auto pt-10 pb-16 px-4 space-y-8">
         {/* Project Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
+        <div className="bg-white dark:bg-surface-elevated rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
           {isLoading ? (
             <div className="animate-pulse">
               <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div>
@@ -223,7 +223,7 @@ const ProjectDetail = () => {
         </div>
 
         {/* Prompts Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-md">
+        <div className="bg-white dark:bg-surface-elevated rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-md">
           <div className="mb-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Prompts</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -368,7 +368,7 @@ const ProjectDetail = () => {
           {isLoading ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-sm">
+                <div key={i} className="bg-white dark:bg-surface-elevated border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-sm">
                   <div className="animate-pulse">
                     <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div>
                     <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
@@ -390,7 +390,7 @@ const ProjectDetail = () => {
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {visiblePrompts.map((pr) => (
-                <div key={pr._id} className="group relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-800 transition-all duration-200">
+                <div key={pr._id} className="group relative bg-white dark:bg-surface-elevated border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-800 transition-all duration-200">
                   {editingPromptId === pr._id ? (
                     // Edit Form
                     <form onSubmit={handleUpdatePrompt} className="p-6">
@@ -494,7 +494,7 @@ const ProjectDetail = () => {
 
                       {/* Delete Confirmation */}
                       {deleteConfirmId === pr._id && (
-                        <div className="absolute inset-0 bg-white dark:bg-gray-800 rounded-xl border-2 border-red-300 dark:border-red-700 p-4 z-10 flex flex-col justify-center items-center">
+                        <div className="absolute inset-0 bg-white dark:bg-surface-elevated rounded-xl border-2 border-red-300 dark:border-red-700 p-4 z-10 flex flex-col justify-center items-center">
                           <p className="text-sm font-medium text-gray-900 dark:text-white mb-4 text-center">
                             Are you sure you want to delete this prompt?
                           </p>

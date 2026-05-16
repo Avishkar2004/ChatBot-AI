@@ -36,7 +36,7 @@ const Navbar = () => {
   }, [userMenuOpen]);
 
   const navLinkClass = ({ isActive }) =>
-    `px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}`;
+    `px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive ? 'text-emerald-400 bg-emerald-500/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`;
 
   const userInitial = user?.username ? user.username.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : '?');
 
@@ -69,7 +69,7 @@ const Navbar = () => {
           animation: slideInFromTop 0.2s ease-out;
         }
       `}</style>
-      <nav className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'shadow-xl shadow-black/25 bg-white/95 dark:bg-gray-900/95' : 'bg-white/90 dark:bg-gray-900/90'} border-b border-gray-200 dark:border-gray-700 backdrop-blur-xl`}>
+      <nav className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'shadow-xl shadow-black/25 bg-surface/90' : 'bg-surface/70'} border-b border-white/10 backdrop-blur-xl`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             {/* Left: Logo */}
@@ -80,7 +80,7 @@ const Navbar = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                 </div>
-                <span className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors duration-300">Chatbot AI</span>
+                <span className="text-xl font-bold text-white group-hover:text-emerald-400 transition-colors duration-300">Chatbot AI</span>
               </Link>
             </div>
 
@@ -94,7 +94,7 @@ const Navbar = () => {
                 </>
               )}
               {/* Public links */}
-              <Link to="features" className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200">Features</Link>
+              <Link to="features" className="px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200">Features</Link>
             </div>
 
             {/* Right: Actions */}
@@ -106,14 +106,14 @@ const Navbar = () => {
                       onClick={() => setUserMenuOpen(v => !v)}
                       aria-haspopup="menu"
                       aria-expanded={userMenuOpen}
-                      className="inline-flex items-center gap-3 rounded-xl px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all duration-200 border border-gray-200 dark:border-gray-700"
+                      className="inline-flex items-center gap-3 rounded-xl px-4 py-2 hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all duration-200 border border-white/10"
                     >
                       <div className="h-8 w-8 rounded-full bg-gradient-to-br from-emerald-500 to-blue-600 text-white flex items-center justify-center text-sm font-semibold shadow-lg">
                         {userInitial}
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.username || 'User'}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 hidden lg:block">{user?.email}</p>
+                        <p className="text-sm font-medium text-white">{user?.username || 'User'}</p>
+                        <p className="text-xs text-gray-400 hidden lg:block">{user?.email}</p>
                       </div>
                       <svg className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
@@ -122,12 +122,12 @@ const Navbar = () => {
                     {userMenuOpen && (
                       <div
                         role="menu"
-                        className="absolute right-0 mt-2 w-72 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-2xl shadow-black/10 dark:shadow-black/30 py-3 z-[60] animate-slide-in"
+                        className="absolute right-0 mt-2 w-72 rounded-2xl border border-white/10 bg-surface-elevated/95 backdrop-blur-xl shadow-2xl shadow-black/30 py-3 z-[60] animate-slide-in"
                       >
-                        <div className="px-4 py-3 border-b border-gray-200/50 dark:border-gray-700/50">
-                          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold mb-1">Account</p>
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{user?.username || 'User'}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
+                        <div className="px-4 py-3 border-b border-white/10">
+                          <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Account</p>
+                          <p className="text-sm font-semibold text-white">{user?.username || 'User'}</p>
+                          <p className="text-xs text-gray-400 truncate">{user?.email}</p>
                         </div>
                         <button
                           onClick={() => { navigate('/dashboard'); setUserMenuOpen(false); }}
@@ -196,7 +196,7 @@ const Navbar = () => {
                 </>
               ) : (
                 <>
-                  <NavLink to="/login" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-200">Sign in</NavLink>
+                  <NavLink to="/login" className="text-sm font-medium text-gray-300 hover:text-white transition-colors duration-200">Sign in</NavLink>
                   <Link to="/signup" className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-emerald-500/25 shadow-md">Get started</Link>
                 </>
               )}
@@ -223,7 +223,7 @@ const Navbar = () => {
 
         {/* Mobile panel */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-gray-200/50 dark:border-gray-700/50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl animate-slide-in">
+          <div className="md:hidden border-t border-white/10 bg-surface/95 backdrop-blur-xl animate-slide-in">
             <div className="px-4 pt-4 pb-6 space-y-1">
               <NavLink to="/" onClick={() => setMobileOpen(false)} className={navLinkClass} end>Home</NavLink>
               {isAuthenticated && (

@@ -103,7 +103,7 @@ const Signup = () => {
             </div>
 
             {/* Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-xl">
+            <div className="bg-white dark:bg-surface-elevated rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-xl">
               {error && (
                 <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 flex items-start gap-3">
                   <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

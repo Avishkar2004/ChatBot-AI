@@ -208,7 +208,7 @@ const Projects = () => {
         </div>
 
         {/* Toolbar: Search, Sorting, Page size */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 mb-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-4 mb-6 border border-gray-200 dark:border-gray-700">
           <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
             <div className="flex-1">
               <div className="relative">
@@ -253,7 +253,7 @@ const Projects = () => {
         </div>
 
         {/* Create/Edit Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
             {editingProject ? 'Edit Project' : 'Create New Project'}
           </h2>
@@ -339,7 +339,7 @@ const Projects = () => {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {listLoading && (
             Array.from({ length: pageSize }).map((_, idx) => (
-              <div key={`skeleton-${idx}`} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 animate-pulse">
+              <div key={`skeleton-${idx}`} className="bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 animate-pulse">
                 <div className="h-5 w-1/2 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div>
                 <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mb-6"></div>
                 <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
@@ -348,7 +348,7 @@ const Projects = () => {
             ))
           )}
           {!listLoading && filteredSorted.length === 0 ? (
-            <div className="sm:col-span-2 lg:col-span-3 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center border border-gray-200 dark:border-gray-700">
+            <div className="sm:col-span-2 lg:col-span-3 bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-12 text-center border border-gray-200 dark:border-gray-700">
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -377,7 +377,7 @@ const Projects = () => {
             </div>
           ) : (
             paginated.map((project) => (
-              <div key={project._id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-200">
+              <div key={project._id} className="bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-200">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{project.name}</h3>
@@ -465,7 +465,7 @@ const Projects = () => {
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div className="bg-white dark:bg-surface-elevated rounded-2xl shadow-xl max-w-md w-full p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

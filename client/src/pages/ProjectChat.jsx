@@ -24,6 +24,9 @@ const ProjectChat = () => {
   const textareaRef = useRef(null);
   const sendingRef = useRef(false);
   const lastDraftRef = useRef('');
+  const copyTimeoutRef = useRef(null);
+  const [copyState, setCopyState] = useState(null); // { key, content, status: 'copied' | 'failed' }
+  const [copyingKey, setCopyingKey] = useState(null);
 
   const mdPlugins = useMemo(
     () => ({
@@ -139,12 +142,93 @@ const ProjectChat = () => {
     }
   };
 
-  const copyToClipboard = async (text) => {
-    try {
-      await navigator.clipboard.writeText(text || '');
-    } catch (_) {
-      // noop
+  const resetCopyState = () => {
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = null;
     }
+    setCopyState(null);
+    setCopyingKey(null);
+  };
+
+  useEffect(() => () => resetCopyState(), []);
+
+  useEffect(() => {
+    resetCopyState();
+  }, [projectId]);
+
+  useEffect(() => {
+    if (copyState && copyState.key >= messages.length) {
+      resetCopyState();
+    }
+  }, [messages.length, copyState]);
+
+  const writeToClipboard = async (text) => {
+    if (!text) return false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (_) {
+      // fall through to legacy copy
+    }
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  const handleCopyResponse = async (messageKey, text) => {
+    const trimmed = (text || '').trim();
+    if (!trimmed || copyingKey === messageKey) return;
+
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = null;
+    }
+
+    setCopyingKey(messageKey);
+
+    const success = await writeToClipboard(trimmed);
+    setCopyingKey(null);
+
+    if (!success) {
+      setCopyState({ key: messageKey, content: trimmed, status: 'failed' });
+      copyTimeoutRef.current = setTimeout(() => {
+        setCopyState(null);
+        copyTimeoutRef.current = null;
+      }, 2500);
+      return;
+    }
+
+    setCopyState({ key: messageKey, content: trimmed, status: 'copied' });
+    copyTimeoutRef.current = setTimeout(() => {
+      setCopyState(null);
+      copyTimeoutRef.current = null;
+    }, 2000);
+  };
+
+  const getCopyFeedback = (messageKey, content) => {
+    const trimmed = (content || '').trim();
+    if (
+      !copyState ||
+      copyState.key !== messageKey ||
+      copyState.content !== trimmed
+    ) {
+      return null;
+    }
+    return copyState.status;
   };
 
   const handleClearChat = async () => {
@@ -156,6 +240,7 @@ const ProjectChat = () => {
       setSessionId('');
       setShowClearConfirm(false);
       setError('');
+      resetCopyState();
     } catch (e) {
       setError(e.message || 'Failed to clear chat history');
     } finally {
@@ -170,12 +255,12 @@ const ProjectChat = () => {
   ];
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-[#0b0f13] text-gray-100 overflow-hidden">
+    <div className="h-[100dvh] flex flex-col bg-surface text-gray-100 overflow-hidden">
       {/* Header */}
       <motion.div 
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="sticky top-0 z-20 bg-[#0b0f13]/70 backdrop-blur-xl border-b border-white/10"
+        className="sticky top-0 z-20 bg-surface/70 backdrop-blur-xl border-b border-white/10"
       >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
@@ -249,7 +334,7 @@ const ProjectChat = () => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#0f1720] rounded-2xl p-6 max-w-md w-full shadow-2xl border border-white/10"
+              className="bg-surface-elevated rounded-2xl p-6 max-w-md w-full shadow-2xl border border-white/10"
             >
               <h3 className="text-lg font-semibold text-white mb-2">
                 Clear Chat History?
@@ -333,7 +418,7 @@ const ProjectChat = () => {
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.3 }}
-                    className={`group flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {m.role === 'assistant' && (
                       <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
@@ -349,9 +434,8 @@ const ProjectChat = () => {
                           : 'bg-white/5 text-gray-100 border border-white/10 rounded-bl-sm'
                       }`}>
                         {m.role === 'assistant' ? (
-                          <div className="relative">
-                            <div className="markdown text-sm leading-relaxed break-words">
-                              <ReactMarkdown
+                          <div className="markdown text-sm leading-relaxed break-words">
+                            <ReactMarkdown
                                 remarkPlugins={mdPlugins.remarkPlugins}
                                 rehypePlugins={mdPlugins.rehypePlugins}
                                 components={{
@@ -392,24 +476,72 @@ const ProjectChat = () => {
                                 }}
                               >
                                 {m.content || ''}
-                              </ReactMarkdown>
-                            </div>
-
-                            {!!m.content && (
-                              <button
-                                type="button"
-                                onClick={() => copyToClipboard(m.content)}
-                                className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2 py-1 rounded-lg bg-black/70 text-white shadow-lg border border-white/10 hover:bg-black/80"
-                                title="Copy"
-                              >
-                                Copy
-                              </button>
-                            )}
+                            </ReactMarkdown>
                           </div>
                         ) : (
                           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.content}</p>
                         )}
                       </div>
+                      {m.role === 'assistant' && !!m.content?.trim() && (() => {
+                        const feedback = getCopyFeedback(idx, m.content);
+                        const isCopying = copyingKey === idx;
+                        const isCopied = feedback === 'copied';
+                        const isFailed = feedback === 'failed';
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyResponse(idx, m.content)}
+                            disabled={isCopying}
+                            className={`mt-1.5 text-xs flex items-center gap-1 transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                              isCopied
+                                ? 'text-emerald-400'
+                                : isFailed
+                                  ? 'text-red-400'
+                                  : 'text-gray-400 hover:text-emerald-400'
+                            }`}
+                            title={
+                              isCopied
+                                ? 'Copied to clipboard'
+                                : isFailed
+                                  ? 'Could not copy'
+                                  : 'Copy response'
+                            }
+                            aria-live="polite"
+                          >
+                            {isCopying ? (
+                              <>
+                                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Copying…
+                              </>
+                            ) : isCopied ? (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Copied
+                              </>
+                            ) : isFailed ? (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Failed to copy
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                Copy
+                              </>
+                            )}
+                          </button>
+                        );
+                      })()}
                       <p className={`text-xs text-gray-400 mt-1.5 px-1 ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
                         {m.role === 'user' ? 'You' : 'AI'}
                       </p>
@@ -470,7 +602,7 @@ const ProjectChat = () => {
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="sticky bottom-0 bg-[#0b0f13]/70 backdrop-blur-xl border-t border-white/10 shadow-2xl shadow-black/30"
+        className="sticky bottom-0 bg-surface/70 backdrop-blur-xl border-t border-white/10 shadow-2xl shadow-black/30"
       >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
           <form onSubmit={send} className="relative">

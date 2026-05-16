@@ -23,6 +23,11 @@ module.exports = {
           800: '#065f46',
           900: '#064e3b',
         },
+        surface: {
+          DEFAULT: '#0b0f13',
+          elevated: '#0f1720',
+          muted: '#111827',
+        },
       },
     },
   },

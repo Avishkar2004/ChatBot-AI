@@ -11,7 +11,7 @@ function Home() {
     if (loading) {
         return (
             <motion.div
-                className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center"
+                className="min-h-screen bg-surface flex items-center justify-center"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5 }}
@@ -42,7 +42,7 @@ function Home() {
 
     return (
         <motion.div
-            className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800"
+            className="min-h-screen bg-surface"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6 }}
@@ -185,7 +185,7 @@ function Home() {
                                         </motion.a>
                                         <motion.a
                                             href="/dashboard"
-                                            className="inline-flex items-center justify-center px-8 py-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-semibold rounded-xl border border-gray-200 dark:border-gray-700"
+                                            className="inline-flex items-center justify-center px-8 py-4 bg-white dark:bg-surface-elevated text-gray-900 dark:text-white font-semibold rounded-xl border border-gray-200 dark:border-gray-700"
                                             whileHover={{
                                                 scale: 1.05,
                                                 y: -2,
@@ -224,7 +224,7 @@ function Home() {
                                         </motion.a>
                                         <motion.a
                                             href="/login"
-                                            className="inline-flex items-center justify-center px-8 py-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-semibold rounded-xl border border-gray-200 dark:border-gray-700"
+                                            className="inline-flex items-center justify-center px-8 py-4 bg-white dark:bg-surface-elevated text-gray-900 dark:text-white font-semibold rounded-xl border border-gray-200 dark:border-gray-700"
                                             whileHover={{
                                                 scale: 1.05,
                                                 y: -2,
@@ -294,7 +294,7 @@ function Home() {
                                 }}
                             />
                             <motion.div
-                                className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-200 dark:border-gray-700"
+                                className="relative bg-white dark:bg-surface-elevated rounded-2xl shadow-2xl p-8 border border-gray-200 dark:border-gray-700"
                                 whileHover={{ scale: 1.02, y: -5 }}
                                 transition={{ type: "spring", stiffness: 300 }}
                             >
@@ -441,7 +441,7 @@ function Home() {
             {/* Animated CTA Section */}
             {!isAuthenticated && (
                 <motion.section
-                    className="py-24 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800"
+                    className="py-24 bg-surface"
                     initial={{ opacity: 0, y: 50 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
@@ -461,7 +461,7 @@ function Home() {
                         />
                         <Container>
                             <motion.div
-                                className="relative text-center text-gray-900 dark:text-white bg-white/70 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60 rounded-3xl px-6 py-12 sm:px-10 shadow-xl"
+                                className="relative text-center text-gray-900 dark:text-white bg-white/70 dark:bg-surface-elevated/60 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60 rounded-3xl px-6 py-12 sm:px-10 shadow-xl"
                                 initial={{ opacity: 0, y: 30 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
@@ -537,7 +537,7 @@ function Home() {
                                     </motion.a>
                                     <motion.a
                                         href="/login"
-                                        className="inline-flex items-center justify-center px-8 py-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-semibold rounded-xl border border-gray-200 dark:border-gray-700"
+                                        className="inline-flex items-center justify-center px-8 py-4 bg-white dark:bg-surface-elevated text-gray-900 dark:text-white font-semibold rounded-xl border border-gray-200 dark:border-gray-700"
                                         whileHover={{
                                             scale: 1.05,
                                             y: -2,
