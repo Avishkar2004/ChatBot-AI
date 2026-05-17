@@ -236,7 +236,7 @@ const Navbar = () => {
               <div className="h-px bg-gray-200 dark:bg-gray-700 my-4" />
               {isAuthenticated ? (
                 <>
-                  <div className="px-4 py-4 border border-gray-200/50 dark:border-gray-700/50 rounded-2xl mb-4 bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 backdrop-blur-sm">
+                  <div className="px-4 py-6 border border-gray-200/50 dark:border-gray-700/50 rounded-2xl mb-4 bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 backdrop-blur-sm">
                     <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold mb-1">Account</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{user?.username || 'User'}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>

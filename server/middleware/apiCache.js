@@ -242,7 +242,7 @@ const invalidateCachePatterns = async (req, patterns) => {
         if (projectId) {
           await redisCache.invalidateProject(projectId);
         }
-      } else if (pattern.startsWith("prompts:")) {
+      } else if (pattern === "prompts" || pattern.startsWith("prompts:")) {
         const projectId = pattern.split(":")[1] || req.params.projectId;
         if (projectId) {
           await redisCache.invalidatePrompts(projectId);

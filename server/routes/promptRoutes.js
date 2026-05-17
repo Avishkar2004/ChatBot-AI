@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { body, param } from "express-validator";
 import requireAuth from "../middleware/auth.js";
-import { apiCache, invalidateCache } from "../middleware/apiCache.js";
+import { invalidateCache } from "../middleware/apiCache.js";
 import redisCache from "../services/redisCache.js";
 import Prompt from "../models/Prompt.js";
 import Project from "../models/Project.js";
@@ -21,11 +21,10 @@ async function assertProject(req, res, next) {
   next();
 }
 
-// List prompts with caching
+// List prompts (project-level redis cache only; apiCache removed to avoid stale empty lists)
 router.get(
   "/:projectId/prompts",
   assertProject,
-  apiCache({ ttl: 1800 }), // 30 minutes
   async (req, res) => {
     try {
       // Try to get from cache first
@@ -47,6 +46,28 @@ router.get(
     } catch (error) {
       console.error("Get prompts error:", error);
       res.status(500).json({ message: "Failed to fetch prompts" });
+    }
+  }
+);
+
+// Get single prompt
+router.get(
+  "/:projectId/prompts/:promptId",
+  assertProject,
+  [param("promptId").isMongoId()],
+  async (req, res) => {
+    try {
+      const prompt = await Prompt.findOne({
+        _id: req.params.promptId,
+        projectId: req.project._id,
+      });
+      if (!prompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+      res.json(prompt);
+    } catch (error) {
+      console.error("Get prompt error:", error);
+      res.status(500).json({ message: "Failed to fetch prompt" });
     }
   }
 );

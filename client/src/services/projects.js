@@ -85,11 +85,30 @@ export async function deleteProject(projectId) {
   }
 }
 
-export async function listPrompts(projectId) {
+function normalizePromptList(data) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data && Array.isArray(data.prompts)) {
+    return data.prompts;
+  }
+  if (data && Array.isArray(data.data)) {
+    return data.data;
+  }
+  return [];
+}
+
+export async function listPrompts(projectId, forceRefresh = false) {
   try {
-    const response = await api.get(API_ENDPOINTS.prompts.list(projectId));
-    return response.data;
+    const url = forceRefresh
+      ? `${API_ENDPOINTS.prompts.list(projectId)}?_t=${Date.now()}`
+      : API_ENDPOINTS.prompts.list(projectId);
+    const response = await api.get(url);
+    return normalizePromptList(response.data);
   } catch (error) {
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
     console.error("Failed to fetch prompts:", error);
     throw error;
   }

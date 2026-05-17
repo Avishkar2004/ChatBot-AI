@@ -186,17 +186,17 @@ const Projects = () => {
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">My Projects</h1>
-            <p className="text-gray-600 dark:text-gray-300">Create and manage your AI chatbot projects</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">My Projects</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Create and manage your AI chatbot projects</p>
           </div>
           <button
             onClick={() => load(true)}
             disabled={listLoading}
-            className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all disabled:opacity-50 flex items-center gap-2"
+            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all disabled:opacity-50 flex items-center gap-2"
             title="Refresh projects"
           >
             <svg 
-              className={`w-5 h-5 ${listLoading ? 'animate-spin' : ''}`} 
+              className={`w-4 h-4 ${listLoading ? 'animate-spin' : ''}`} 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -208,23 +208,23 @@ const Projects = () => {
         </div>
 
         {/* Toolbar: Search, Sorting, Page size */}
-        <div className="bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-4 mb-6 border border-gray-200 dark:border-gray-700">
-          <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-            <div className="flex-1">
+        <div className="bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-4 mb-6 border border-gray-200 dark:border-gray-700 min-w-0">
+          <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between min-w-0">
+            <div className="flex-1 min-w-0">
               <div className="relative">
-                <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
+                <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
                 <input
                   type="text"
-                  className="w-full pl-10 pr-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="Search projects..."
                   value={query}
                   onChange={(e) => { setQuery(e.target.value); setPage(1); }}
                 />
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="grid grid-cols-2 gap-2 w-full min-w-0 md:flex md:gap-3 md:w-auto">
               <select
-                className="px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none"
+                className="col-span-2 w-full min-w-0 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none md:col-span-1 md:w-auto"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
@@ -232,7 +232,7 @@ const Projects = () => {
                 <option value="name">Sort by: Name</option>
               </select>
               <select
-                className="px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none"
+                className="w-full min-w-0 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none md:w-auto"
                 value={sortDir}
                 onChange={(e) => setSortDir(e.target.value)}
               >
@@ -240,7 +240,7 @@ const Projects = () => {
                 <option value="asc">Asc</option>
               </select>
               <select
-                className="px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none"
+                className="w-full min-w-0 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none md:w-auto"
                 value={pageSize}
                 onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
               >
@@ -254,7 +254,7 @@ const Projects = () => {
 
         {/* Create/Edit Form */}
         <div className="bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
             {editingProject ? 'Edit Project' : 'Create New Project'}
           </h2>
 
@@ -264,7 +264,7 @@ const Projects = () => {
                 <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-red-700 dark:text-red-400 text-sm">{error}</span>
+                <span className="text-red-700 dark:text-red-400 text-xs">{error}</span>
               </div>
             </div>
           )}
@@ -272,12 +272,12 @@ const Projects = () => {
           <form onSubmit={editingProject ? onUpdate : onCreate} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Project Name
                 </label>
                 <input
                   type="text"
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="e.g., Customer Support Bot"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -285,12 +285,12 @@ const Projects = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Description (Optional)
                 </label>
                 <input
                   type="text"
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="Brief description of your project"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -302,7 +302,7 @@ const Projects = () => {
               <button
                 type="submit"
                 disabled={loading || !name.trim()}
-                className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-semibold rounded-xl hover:from-emerald-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center px-4 py-2 text-sm bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-xl hover:from-emerald-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>
@@ -326,7 +326,7 @@ const Projects = () => {
                 <button
                   type="button"
                   onClick={cancelEdit}
-                  className="inline-flex items-center justify-center px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200"
+                  className="inline-flex items-center justify-center px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200"
                 >
                   Cancel
                 </button>
@@ -354,12 +354,12 @@ const Projects = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
                 {items.length === 0 && query.trim() === '' 
                   ? 'No projects yet' 
                   : 'No projects found'}
               </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                 {items.length === 0 && query.trim() === ''
                   ? 'Create your first project to get started'
                   : query.trim() 
@@ -369,7 +369,7 @@ const Projects = () => {
               {items.length === 0 && query.trim() === '' && (
                 <button
                   onClick={() => document.querySelector('input[type="text"]')?.focus()}
-                  className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white rounded-xl hover:from-emerald-700 hover:to-blue-700 transition-all"
+                  className="px-3 py-1.5 text-sm bg-gradient-to-r from-emerald-600 to-blue-600 text-white rounded-xl hover:from-emerald-700 hover:to-blue-700 transition-all"
                 >
                   Create Your First Project
                 </button>
@@ -380,8 +380,8 @@ const Projects = () => {
               <div key={project._id} className="bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-200">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{project.name}</h3>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">{project.description || 'No description'}</p>
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">{project.name}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{project.description || 'No description'}</p>
                     <div className="mt-2 text-xs text-gray-400">
                       <span>Updated {project.updatedAt ? new Date(project.updatedAt).toLocaleString() : '—'}</span>
                     </div>
@@ -411,7 +411,7 @@ const Projects = () => {
                 <div className="flex gap-2">
                   <Link
                     to={`/projects/${project._id}`}
-                    className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-lg hover:from-emerald-700 hover:to-blue-700 transition-all duration-200 text-sm"
+                    className="flex-1 inline-flex items-center justify-center px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-lg hover:from-emerald-700 hover:to-blue-700 transition-all duration-200 text-xs"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -421,7 +421,7 @@ const Projects = () => {
                   </Link>
                   <Link
                     to={`/projects/${project._id}/chat`}
-                    className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 text-sm"
+                    className="flex-1 inline-flex items-center justify-center px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 text-xs"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -436,7 +436,7 @@ const Projects = () => {
 
         {/* Pagination */}
         {!listLoading && filteredSorted.length > 0 && (
-          <div className="flex items-center justify-between mt-6 text-sm text-gray-600 dark:text-gray-300">
+          <div className="flex items-center justify-between mt-6 text-xs text-gray-600 dark:text-gray-300">
             <div>
               Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filteredSorted.length)} of {filteredSorted.length}
             </div>
@@ -444,7 +444,7 @@ const Projects = () => {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+                className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50"
               >
                 Prev
               </button>
@@ -454,7 +454,7 @@ const Projects = () => {
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+                className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50"
               >
                 Next
               </button>
@@ -473,12 +473,12 @@ const Projects = () => {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Delete Project</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">This action cannot be undone</p>
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">Delete Project</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">This action cannot be undone</p>
                 </div>
               </div>
 
-              <p className="text-gray-600 dark:text-gray-300 mb-6">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                 Are you sure you want to delete this project? All associated prompts and chat history will be permanently removed.
               </p>
 
@@ -486,7 +486,7 @@ const Projects = () => {
                 <button
                   onClick={() => onDelete(showDeleteConfirm)}
                   disabled={loading}
-                  className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-all duration-200 disabled:opacity-50"
+                  className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-all duration-200 disabled:opacity-50"
                 >
                   {loading ? (
                     <>
@@ -502,7 +502,7 @@ const Projects = () => {
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(null)}
-                  className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200"
+                  className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200"
                 >
                   Cancel
                 </button>
