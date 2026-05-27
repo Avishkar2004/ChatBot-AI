@@ -19,7 +19,7 @@ const AppRoutes = () => {
 
   const hideNavbar = !!matchPath(
     "/projects/:projectId/chat",
-    location.pathname
+    location.pathname,
   );
 
   const hideFooter =
