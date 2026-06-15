@@ -95,6 +95,7 @@ export const API_ENDPOINTS = {
   // Chat endpoints
   chat: {
     send: (projectId) => `${API_URL}/api/projects/${projectId}/chat`,
+    stream: (projectId) => `${API_URL}/api/projects/${projectId}/chat/stream`,
     history: (projectId) => `${API_URL}/api/projects/${projectId}/chat/history`,
     clear: (projectId) => `${API_URL}/api/projects/${projectId}/chat/clear`,
   },

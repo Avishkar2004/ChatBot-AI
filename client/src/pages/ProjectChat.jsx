@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { getProject, sendChat, getChatHistory, clearChatHistory } from '../services/projects.js';
+import { getProject, sendChatStream, getChatHistory, clearChatHistory } from '../services/projects.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -101,26 +101,50 @@ const ProjectChat = () => {
     const userMsg = { role: 'user', content: trimmed };
     lastDraftRef.current = trimmed;
 
-    // Optimistic UI
-    setMessages((m) => [...m, userMsg]);
+    // Optimistic UI: append the user message plus an empty assistant bubble
+    // that we stream tokens into as they arrive.
+    setMessages((m) => [
+      ...m,
+      userMsg,
+      { role: 'assistant', content: '', streaming: true },
+    ]);
     setInput('');
     setError('');
 
     sendingRef.current = true;
     setIsSending(true);
 
+    // Replace the trailing streaming placeholder using an updater so we never
+    // depend on a stale index.
+    const updateStreaming = (updater) =>
+      setMessages((m) => {
+        const copy = [...m];
+        const last = copy[copy.length - 1];
+        if (last?.role === 'assistant' && last.streaming) {
+          copy[copy.length - 1] = updater(last);
+        }
+        return copy;
+      });
+
     try {
-      const { reply, sessionId: sid } = await sendChat(
-        projectId,
-        userMsg.content,
-        sessionId || undefined
-      );
-      if (sid && sid !== sessionId) setSessionId(sid);
-      const safeReply =
-        typeof reply === 'string' && reply.trim()
-          ? reply
-          : 'I couldn’t generate a response this time. Please try again.';
-      setMessages((m) => [...m, { role: 'assistant', content: safeReply }]);
+      await sendChatStream(projectId, trimmed, sessionId || undefined, {
+        onMeta: (meta) => {
+          if (meta?.sessionId && meta.sessionId !== sessionId) {
+            setSessionId(meta.sessionId);
+          }
+        },
+        onDelta: (_delta, full) => {
+          updateStreaming((last) => ({ ...last, content: full }));
+        },
+      });
+
+      // Finalize: drop the streaming flag and guard against an empty reply.
+      updateStreaming((last) => ({
+        role: 'assistant',
+        content: last.content?.trim()
+          ? last.content
+          : 'I couldn’t generate a response this time. Please try again.',
+      }));
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -128,9 +152,16 @@ const ProjectChat = () => {
         'Failed to send message. Please try again.';
       setError(msg);
 
-      // Rollback optimistic user message and restore draft for editing/retry
+      // Rollback the assistant placeholder and the optimistic user message,
+      // then restore the draft for editing/retry.
       setMessages((m) => {
         const copy = [...m];
+        if (
+          copy[copy.length - 1]?.role === 'assistant' &&
+          copy[copy.length - 1]?.streaming
+        ) {
+          copy.pop();
+        }
         const last = copy[copy.length - 1];
         if (last?.role === 'user' && last?.content === trimmed) copy.pop();
         return copy;
@@ -434,6 +465,18 @@ const ProjectChat = () => {
                           : 'bg-white/5 text-gray-100 border border-white/10 rounded-bl-sm'
                       }`}>
                         {m.role === 'assistant' ? (
+                          m.streaming && !m.content?.trim() ? (
+                            <div className="flex items-center gap-1 py-1" aria-label="AI is typing">
+                              {[0, 0.2, 0.4].map((delay) => (
+                                <motion.div
+                                  key={delay}
+                                  className="w-2 h-2 bg-emerald-500 rounded-full"
+                                  animate={{ y: [0, -4, 0] }}
+                                  transition={{ duration: 0.6, repeat: Infinity, delay }}
+                                />
+                              ))}
+                            </div>
+                          ) : (
                           <div className="markdown text-sm leading-relaxed break-words">
                             <ReactMarkdown
                                 remarkPlugins={mdPlugins.remarkPlugins}
@@ -477,7 +520,11 @@ const ProjectChat = () => {
                               >
                                 {m.content || ''}
                             </ReactMarkdown>
+                            {m.streaming && (
+                              <span className="inline-block w-1.5 h-4 align-text-bottom ml-0.5 bg-emerald-400 animate-pulse rounded-sm" aria-hidden="true" />
+                            )}
                           </div>
+                          )
                         ) : (
                           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.content}</p>
                         )}
@@ -557,41 +604,8 @@ const ProjectChat = () => {
                 ))}
               </AnimatePresence>
 
-              {isSending && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex gap-3 justify-start"
-                >
-                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                  </div>
-                  <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="flex gap-1">
-                        <motion.div
-                          className="w-2 h-2 bg-emerald-500 rounded-full"
-                          animate={{ y: [0, -4, 0] }}
-                          transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                        />
-                        <motion.div
-                          className="w-2 h-2 bg-emerald-500 rounded-full"
-                          animate={{ y: [0, -4, 0] }}
-                          transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-                        />
-                        <motion.div
-                          className="w-2 h-2 bg-emerald-500 rounded-full"
-                          animate={{ y: [0, -4, 0] }}
-                          transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-                        />
-                      </div>
-                      <span className="text-xs text-gray-400">AI is typing...</span>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+              {/* The streaming assistant bubble renders its own typing dots
+                  until the first token arrives, so no separate indicator. */}
               <div ref={endRef} />
             </div>
           )}

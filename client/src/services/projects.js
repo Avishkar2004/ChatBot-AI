@@ -178,6 +178,109 @@ export async function sendChat(projectId, message, sessionId) {
   }
 }
 
+/**
+ * Stream a chat reply over Server-Sent Events.
+ *
+ * Axios can't read a streaming body in the browser, so we use fetch +
+ * ReadableStream directly. Deltas are delivered via the `onDelta` callback as
+ * they arrive; the resolved promise contains the full reply plus metadata.
+ *
+ * @param {string} projectId
+ * @param {string} message
+ * @param {string} [sessionId]
+ * @param {{ onDelta?: (delta: string, full: string) => void,
+ *           onMeta?: (meta: { model?: string, sessionId?: string }) => void,
+ *           signal?: AbortSignal }} [handlers]
+ * @returns {Promise<{ reply: string, model?: string, sessionId?: string }>}
+ */
+export async function sendChatStream(
+  projectId,
+  message,
+  sessionId,
+  { onDelta, onMeta, signal } = {}
+) {
+  const token = localStorage.getItem("auth_token");
+
+  const response = await fetch(API_ENDPOINTS.chat.stream(projectId), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ message, sessionId }),
+    signal,
+  });
+
+  if (response.status === 401) {
+    // Mirror the axios interceptor: drop the dead token and bounce to login.
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
+    window.location.href = "/login";
+    throw new Error("Session expired. Please log in again.");
+  }
+
+  if (!response.ok || !response.body) {
+    let msg = `Request failed (${response.status})`;
+    try {
+      const data = await response.json();
+      msg = data?.message || msg;
+    } catch {
+      // non-JSON error body; keep the generic message
+    }
+    throw new Error(msg);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let full = "";
+  let meta = {};
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE events are separated by a blank line. Keep the trailing partial
+      // chunk in the buffer until its terminator arrives.
+      const events = buffer.split("\n\n");
+      buffer = events.pop() ?? "";
+
+      for (const evt of events) {
+        const line = evt.trim();
+        if (!line.startsWith("data:")) continue;
+
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+
+        let payload;
+        try {
+          payload = JSON.parse(data);
+        } catch {
+          continue; // ignore malformed frames
+        }
+
+        if (payload.error) throw new Error(payload.error);
+        if (payload.meta) {
+          meta = payload.meta;
+          onMeta?.(payload.meta);
+        }
+        if (payload.delta) {
+          full += payload.delta;
+          onDelta?.(payload.delta, full);
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock?.();
+  }
+
+  return { reply: full, ...meta };
+}
+
 export async function getChatHistory(projectId) {
   try {
     const response = await api.get(API_ENDPOINTS.chat.history(projectId));
