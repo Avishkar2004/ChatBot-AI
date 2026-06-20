@@ -23,7 +23,7 @@ app.use(
   express.json({
     limit: "10mb",
     strict: false,
-  })
+  }),
 );
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 const allowedOrigins = (
@@ -36,7 +36,9 @@ const allowedOrigins = (
   .filter(Boolean);
 
 // Optional regex to allow dynamic preview/prod domains (ex: Vercel previews)
-const allowedOriginRegexes = (process.env.CLIENT_ORIGIN_REGEXES?.split(",") || [])
+const allowedOriginRegexes = (
+  process.env.CLIENT_ORIGIN_REGEXES?.split(",") || []
+)
   .map((s) => s.trim())
   .filter(Boolean)
   .map((pattern) => {
@@ -87,7 +89,7 @@ app.use(
     ],
     optionsSuccessStatus: 204,
     preflightContinue: false,
-  })
+  }),
 );
 
 // Ensure preflight requests always get handled early
