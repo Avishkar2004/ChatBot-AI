@@ -66,7 +66,7 @@ class ConversationStore {
     { userId, projectId, sessionId, model },
     userMessage,
     assistantReply,
-    usage = {}
+    usage = {},
   ) {
     const convo = await this.getOrCreateConversation({
       userId,
