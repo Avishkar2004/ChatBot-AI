@@ -1,17 +1,5 @@
 # Making This a "Real" Production Chatbot — Gap Analysis & Roadmap
 
-> First, an honest correction: **this already *is* a real chatbot project.**
-> You have real LLM inference (Groq), JWT auth, per-project system prompts,
-> Redis-backed conversation memory, rate limiting, and a polished React chat UI
-> with markdown rendering and a typing indicator. That is more than most
-> "chatbot" tutorials ship.
->
-> What you *don't* have yet are the things that separate a working demo from a
-> product people trust with real conversations. This document lists those gaps,
-> in priority order, with the *why* and the concrete *how* for each.
-
----
-
 ## TL;DR — the five things that matter most
 
 | # | Gap | Why it hurts today | Effort |
@@ -23,9 +11,7 @@
 | 5 | **No observability** | When a user says "the bot broke," you have `console.log` and nothing else. No request IDs, no error tracking, no token/cost metrics. | Low–Medium |
 
 Do these five and you go from "impressive portfolio project" to "thing I'd let real users touch."
-
 ---
-
 ## 1. Stream the responses (the single biggest UX upgrade)
 
 **Today:** [`chatRoutes.js`](../server/routes/chatRoutes.js) calls
