@@ -62,7 +62,6 @@ Replace the single `setMessages([...])` call in `send()` with incremental update
 > route is never cached.
 
 ---
-
 ## 2. Persist conversations in MongoDB (stop losing chat history)
 
 **Today:** [`redisCache.js`](../server/services/redisCache.js) stores messages in
