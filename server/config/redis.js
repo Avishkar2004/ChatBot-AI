@@ -1,49 +1,69 @@
 import { createClient } from 'redis';
 import 'dotenv/config';
 
+const CONNECT_TIMEOUT_MS = Number(process.env.REDIS_CONNECT_TIMEOUT_MS || 10000);
+const MAX_RECONNECT_ATTEMPTS = Number(process.env.REDIS_MAX_RECONNECT_ATTEMPTS || 3);
+
 class RedisClient {
   constructor() {
     this.client = null;
     this.isConnected = false;
+    this.lastErrorLoggedAt = 0;
+  }
+
+  logError(message, err) {
+    const now = Date.now();
+    if (now - this.lastErrorLoggedAt < 5000) {
+      return;
+    }
+    this.lastErrorLoggedAt = now;
+    console.error(message, err?.message || err);
+  }
+
+  async cleanupClient() {
+    if (!this.client) {
+      return;
+    }
+
+    try {
+      this.client.removeAllListeners();
+      if (this.client.isOpen) {
+        await this.client.disconnect();
+      }
+    } catch {
+      // Ignore cleanup errors.
+    } finally {
+      this.client = null;
+      this.isConnected = false;
+    }
   }
 
   async connect() {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    const url = new URL(redisUrl);
+
+    await this.cleanupClient();
+
     try {
-      // Parse Redis URL for cloud connections
-      const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-      const url = new URL(redisUrl);
-      
       this.client = createClient({
         url: redisUrl,
         password: process.env.REDIS_PASSWORD || url.password,
         username: url.username,
         socket: {
-          connectTimeout: 60000,
-          lazyConnect: true,
-          // Additional options for Redis Cloud
+          connectTimeout: CONNECT_TIMEOUT_MS,
+          reconnectStrategy: (retries) => {
+            if (retries >= MAX_RECONNECT_ATTEMPTS) {
+              return false;
+            }
+            return Math.min(retries * 500, 2000);
+          },
           tls: url.protocol === 'rediss:' ? {} : undefined,
         },
-        retry_strategy: (options) => {
-          if (options.error && options.error.code === 'ECONNREFUSED') {
-            console.error('Redis server connection refused');
-            return new Error('Redis server connection refused');
-          }
-          if (options.total_retry_time > 1000 * 60 * 60) {
-            console.error('Redis retry time exhausted');
-            return new Error('Redis retry time exhausted');
-          }
-          if (options.attempt > 10) {
-            console.error('Redis max retry attempts reached');
-            return undefined;
-          }
-          return Math.min(options.attempt * 100, 3000);
-        }
       });
 
       this.client.on('error', (err) => {
-        console.error('Redis Client Error:', err);
         this.isConnected = false;
-        // Don't throw here, let the connection attempt handle it
+        this.logError('Redis Client Error:', err);
       });
 
       this.client.on('connect', () => {
@@ -61,20 +81,28 @@ class RedisClient {
         this.isConnected = false;
       });
 
-      await this.client.connect();
-      return this.client;
+      await Promise.race([
+        this.client.connect(),
+        new Promise((_, reject) => {
+          setTimeout(
+            () => reject(new Error(`Redis connection timed out after ${CONNECT_TIMEOUT_MS}ms`)),
+            CONNECT_TIMEOUT_MS,
+          );
+        }),
+      ]);
+
+      this.isConnected = true;
+      return true;
     } catch (error) {
-      console.error('Redis connection failed:', error);
-      this.isConnected = false;
-      throw error;
+      console.error('Redis connection failed:', error.message);
+      console.warn('Starting server without Redis — caching and chat sessions will be limited.');
+      await this.cleanupClient();
+      return false;
     }
   }
 
   async disconnect() {
-    if (this.client) {
-      await this.client.quit();
-      this.isConnected = false;
-    }
+    await this.cleanupClient();
   }
 
   getClient() {
@@ -82,6 +110,10 @@ class RedisClient {
       throw new Error('Redis client not connected');
     }
     return this.client;
+  }
+
+  isAvailable() {
+    return Boolean(this.client && this.isConnected);
   }
 
   // Cache methods

@@ -111,15 +111,14 @@ const initializeServer = async () => {
     await connectDB();
     console.log("MongoDB connected successfully\n");
 
-    // Connect to Redis
-    console.log("Connecting to Redis Cloud...");
-    await redisClient.connect();
-    console.log("Redis Cloud connected successfully\n");
+    // Connect to Redis (optional — server still starts if this fails)
+    console.log("Connecting to Redis...");
+    const redisConnected = await redisClient.connect();
 
-    // Test Redis connection
-    console.log("Testing Redis operations...");
-    try {
-      // Test basic Redis operations
+    if (redisConnected) {
+      console.log("Redis connected successfully\n");
+
+      console.log("Testing Redis operations...");
       await redisClient.set("test:health", "ok", 10);
       const result = await redisClient.get("test:health");
       await redisClient.del("test:health");
@@ -129,9 +128,8 @@ const initializeServer = async () => {
       } else {
         console.log("Redis health check failed, but continuing...\n");
       }
-    } catch (error) {
-      console.log("Redis health check failed:", error.message);
-      console.log("   Continuing with limited functionality...\n");
+    } else {
+      console.log("Redis unavailable — continuing with limited functionality\n");
     }
 
     // Start the server
@@ -146,7 +144,7 @@ const initializeServer = async () => {
     console.error("Server initialization failed:", error);
     console.log("\nTroubleshooting:");
     console.log("\t1. Check MongoDB connection string");
-    console.log("\t2. Check Redis Cloud credentials");
+    console.log("\t2. Check Redis Cloud credentials (optional — server can run without Redis)");
     console.log("\t3. Verify network connectivity");
     console.log("\t4. Check firewall settings");
     process.exit(1);
