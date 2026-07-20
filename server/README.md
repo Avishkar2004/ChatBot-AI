@@ -21,7 +21,7 @@ npm install
      - `MONGODB_URI=mongodb://localhost:27017/chatbot_ai`
      - `PORT=8080`
      - `JWT_SECRET=replace_with_a_long_random_string`
-     - `JWT_EXPIRES_IN=7d`
+     - `JWT_EXPIRES_IN=1d`
 
 ## Running the Application
 
@@ -156,4 +156,3 @@ server/
 ### Common Errors
 - `MongoServerError: Authentication failed` - Check username/password in connection string
 - `MongoNetworkError` - Check network connectivity and MongoDB service status
-
