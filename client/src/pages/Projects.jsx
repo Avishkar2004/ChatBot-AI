@@ -1,32 +1,73 @@
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  FolderKanban,
+  MessageSquare,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Settings2,
+  Trash2,
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext.jsx';
 import {
   listProjects,
   createProject,
   updateProject,
   deleteProject,
-} from "../services/projects.js";
-import Page from "../components/layout/Page.jsx";
+} from '../services/projects.js';
+import Page from '../components/layout/Page.jsx';
+import {
+  Button,
+  Card,
+  Container,
+  EmptyState,
+  IconButton,
+  Input,
+  Modal,
+  PageHeader,
+  Select,
+  Skeleton,
+  Textarea,
+  useToast,
+} from '../components/ui';
+
+const formatUpdated = (value) => {
+  if (!value) return 'Never updated';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Never updated';
+  return `Updated ${date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
+  })}`;
+};
 
 const Projects = () => {
   const { token } = useAuth();
+  const toast = useToast();
+
   const [items, setItems] = useState([]);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [editingProject, setEditingProject] = useState(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [listLoading, setListLoading] = useState(false);
-  const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState("updatedAt");
-  const [sortDir, setSortDir] = useState("desc");
+  const [query, setQuery] = useState('');
+  const [sortBy, setSortBy] = useState('updatedAt');
+  const [sortDir, setSortDir] = useState('desc');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
 
   const load = async (forceRefresh = false) => {
-    setError("");
+    setError('');
     setListLoading(true);
     try {
       const data = await listProjects(forceRefresh);
@@ -39,14 +80,14 @@ const Projects = () => {
         projects = data.projects;
       } else if (data && data.data && Array.isArray(data.data)) {
         projects = data.data;
-      } else if (data && typeof data === "object") {
+      } else if (data && typeof data === 'object') {
         // If it's a single project object, wrap it in an array
         projects = [data];
       }
 
       setItems(projects);
     } catch (e) {
-      setError(e.message || "Failed to load projects");
+      setError(e.message || 'Failed to load projects');
       setItems([]); // Clear items on error
     } finally {
       setListLoading(false);
@@ -57,40 +98,66 @@ const Projects = () => {
     if (token) {
       load(true); // Force refresh on mount to ensure we get latest data
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // Derived: filter, sort, paginate
-  const filtered = items.filter((p) => {
-    if (!query.trim()) return true;
-    const q = query.toLowerCase();
-    return (
-      p.name?.toLowerCase().includes(q) ||
-      p.description?.toLowerCase().includes(q)
-    );
-  });
+  const filteredSorted = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const dir = sortDir === 'asc' ? 1 : -1;
 
-  const filteredSorted = filtered.sort((a, b) => {
-    const dir = sortDir === "asc" ? 1 : -1;
-    if (sortBy === "name") {
-      return a.name.localeCompare(b.name) * dir;
-    }
-    const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-    const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-    return (aTime - bTime) * dir;
-  });
+    return items
+      .filter((p) => {
+        if (!q) return true;
+        return p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q);
+      })
+      .sort((a, b) => {
+        if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '') * dir;
+        const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return (aTime - bTime) * dir;
+      });
+  }, [items, query, sortBy, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSorted.length / pageSize));
-  const start = (page - 1) * pageSize;
+  // Clamp rather than letting the view land on an empty page after a filter.
+  const currentPage = Math.min(page, totalPages);
+  const start = (currentPage - 1) * pageSize;
   const paginated = filteredSorted.slice(start, start + pageSize);
+
+  const openCreate = () => {
+    setEditingProject(null);
+    setName('');
+    setDescription('');
+    setError('');
+    setFormOpen(true);
+  };
+
+  const openEdit = (project) => {
+    setEditingProject(project);
+    setName(project.name);
+    setDescription(project.description || '');
+    setError('');
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    if (loading) return;
+    setFormOpen(false);
+    setEditingProject(null);
+    setName('');
+    setDescription('');
+    setError('');
+  };
 
   const onCreate = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setError('');
     try {
       const newProject = await createProject({ name, description });
-      setName("");
-      setDescription("");
+      setName('');
+      setDescription('');
+      setFormOpen(false);
 
       // Optimistically add the new project to the list immediately
       if (newProject && newProject._id) {
@@ -104,6 +171,8 @@ const Projects = () => {
         });
       }
 
+      toast.success('Project created', newProject?.name || name);
+
       // Wait a bit for cache invalidation to complete, then force refresh
       await new Promise((resolve) => setTimeout(resolve, 1000));
       await load(true); // Force refresh with cache-busting
@@ -116,33 +185,28 @@ const Projects = () => {
     }
   };
 
-  const onEdit = (project) => {
-    setEditingProject(project);
-    setName(project.name);
-    setDescription(project.description || "");
-  };
-
   const onUpdate = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setError('');
     try {
       const updatedProject = await updateProject(editingProject._id, {
         name,
         description,
       });
       setEditingProject(null);
-      setName("");
-      setDescription("");
+      setName('');
+      setDescription('');
+      setFormOpen(false);
 
       // Optimistically update the project in the list
       if (updatedProject && updatedProject._id) {
         setItems((prevItems) =>
-          prevItems.map((p) =>
-            p._id === updatedProject._id ? updatedProject : p,
-          ),
+          prevItems.map((p) => (p._id === updatedProject._id ? updatedProject : p))
         );
       }
+
+      toast.success('Project updated', updatedProject?.name || name);
 
       // Wait a bit for cache invalidation, then force refresh
       await new Promise((resolve) => setTimeout(resolve, 300));
@@ -157,13 +221,14 @@ const Projects = () => {
 
   const onDelete = async (projectId) => {
     setLoading(true);
-    setError("");
+    setError('');
     try {
       await deleteProject(projectId);
       setShowDeleteConfirm(null);
 
       // Optimistically remove the project from the list
       setItems((prevItems) => prevItems.filter((p) => p._id !== projectId));
+      toast.success('Project deleted');
 
       // Wait a bit for cache invalidation, then force refresh
       await new Promise((resolve) => setTimeout(resolve, 300));
@@ -175,7 +240,8 @@ const Projects = () => {
         setItems((prevItems) => prevItems.filter((p) => p._id !== projectId));
         await load(true);
       } else {
-        setError(e.message || "Failed to delete project");
+        setError(e.message || 'Failed to delete project');
+        toast.error('Could not delete project', e.message);
         await load(true);
       }
     } finally {
@@ -183,514 +249,316 @@ const Projects = () => {
     }
   };
 
-  const cancelEdit = () => {
-    setEditingProject(null);
-    setName("");
-    setDescription("");
-    setError("");
-  };
+  const isEmpty = !listLoading && filteredSorted.length === 0;
+  const isFiltered = query.trim().length > 0;
 
   return (
     <Page>
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-              My Projects
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Create and manage your AI chatbot projects
-            </p>
-          </div>
-          <button
-            onClick={() => load(true)}
-            disabled={listLoading}
-            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all disabled:opacity-50 flex items-center gap-2"
-            title="Refresh projects"
-          >
-            <svg
-              className={`w-4 h-4 ${listLoading ? "animate-spin" : ""}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+      <Container className="pb-20">
+        <PageHeader
+          title="Projects"
+          description="Each project holds its own agent, prompt library, and conversation history."
+          actions={
+            <>
+              <IconButton
+                label="Refresh"
+                icon={RefreshCw}
+                size="lg"
+                variant="subtle"
+                onClick={() => load(true)}
+                disabled={listLoading}
+                className={listLoading ? '[&>svg]:animate-spin-slow' : undefined}
               />
-            </svg>
-            Refresh
-          </button>
-        </div>
+              <Button leftIcon={<Plus size={15} />} onClick={openCreate}>
+                New project
+              </Button>
+            </>
+          }
+        />
 
-        {/* Toolbar: Search, Sorting, Page size */}
-        <div className="bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-4 mb-6 border border-gray-200 dark:border-gray-700 min-w-0">
-          <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between min-w-0">
-            <div className="flex-1 min-w-0">
-              <div className="relative">
-                <svg
-                  className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
-                  />
-                </svg>
-                <input
-                  type="text"
-                  className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  placeholder="Search projects..."
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 w-full min-w-0 md:flex md:gap-3 md:w-auto">
-              <select
-                className="col-span-2 w-full min-w-0 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none md:col-span-1 md:w-auto"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="updatedAt">Sort by: Last updated</option>
-                <option value="name">Sort by: Name</option>
-              </select>
-              <select
-                className="w-full min-w-0 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none md:w-auto"
-                value={sortDir}
-                onChange={(e) => setSortDir(e.target.value)}
-              >
-                <option value="desc">Desc</option>
-                <option value="asc">Asc</option>
-              </select>
-              <select
-                className="w-full min-w-0 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none md:w-auto"
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(1);
-                }}
-              >
-                <option value={6}>6 / page</option>
-                <option value={9}>9 / page</option>
-                <option value={12}>12 / page</option>
-              </select>
-            </div>
+        {error && !formOpen && (
+          <div
+            role="alert"
+            className="mb-6 flex items-start gap-2.5 rounded-lg border border-rose-500/25 bg-rose-500/10 px-3.5 py-3"
+          >
+            <AlertCircle size={16} className="mt-px shrink-0 text-rose-400" aria-hidden="true" />
+            <p className="text-[13px] leading-relaxed text-rose-200">{error}</p>
+          </div>
+        )}
+
+        {/* Toolbar */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="sm:max-w-xs sm:flex-1">
+            <Input
+              size="md"
+              type="search"
+              aria-label="Search projects"
+              placeholder="Search projects…"
+              leftIcon={<Search size={15} aria-hidden="true" />}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <Select
+              size="md"
+              aria-label="Sort by"
+              className="w-auto"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="updatedAt">Last updated</option>
+              <option value="name">Name</option>
+            </Select>
+            <Select
+              size="md"
+              aria-label="Sort direction"
+              className="w-auto"
+              value={sortDir}
+              onChange={(e) => setSortDir(e.target.value)}
+            >
+              <option value="desc">Descending</option>
+              <option value="asc">Ascending</option>
+            </Select>
+            <Select
+              size="md"
+              aria-label="Results per page"
+              className="w-auto"
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              <option value={6}>6 / page</option>
+              <option value={9}>9 / page</option>
+              <option value={12}>12 / page</option>
+            </Select>
           </div>
         </div>
 
-        {/* Create/Edit Form */}
-        <div className="bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
-            {editingProject ? "Edit Project" : "Create New Project"}
-          </h2>
-
-          {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4">
-              <div className="flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-red-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span className="text-red-700 dark:text-red-400 text-xs">
-                  {error}
-                </span>
-              </div>
+        {/* Grid */}
+        <div className="mt-5">
+          {listLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: pageSize }).map((_, idx) => (
+                <Card key={`skeleton-${idx}`} padding="md">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="mt-3 h-3 w-4/5" />
+                  <Skeleton className="mt-2 h-3 w-1/3" />
+                  <div className="mt-6 flex gap-2">
+                    <Skeleton className="h-8 flex-1" />
+                    <Skeleton className="h-8 flex-1" />
+                  </div>
+                </Card>
+              ))}
             </div>
-          )}
-
-          <form
-            onSubmit={editingProject ? onUpdate : onCreate}
-            className="space-y-4"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Project Name
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  placeholder="e.g., Customer Support Bot"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Description (Optional)
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  placeholder="Brief description of your project"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                disabled={loading || !name.trim()}
-                className="inline-flex items-center justify-center px-4 py-2 text-sm bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-xl hover:from-emerald-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <svg
-                      className="w-5 h-5 mr-2 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    {editingProject ? "Updating..." : "Creating..."}
-                  </>
+          ) : isEmpty ? (
+            <EmptyState
+              icon={FolderKanban}
+              title={isFiltered ? 'No matching projects' : 'No projects yet'}
+              description={
+                isFiltered
+                  ? `Nothing matches “${query.trim()}”. Try a different search term.`
+                  : 'Create your first project to start configuring an agent and its prompts.'
+              }
+              action={
+                isFiltered ? (
+                  <Button variant="secondary" onClick={() => setQuery('')}>
+                    Clear search
+                  </Button>
                 ) : (
-                  <>
-                    <svg
-                      className="w-5 h-5 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                      />
-                    </svg>
-                    {editingProject ? "Update Project" : "Create Project"}
-                  </>
-                )}
-              </button>
-
-              {editingProject && (
-                <button
-                  type="button"
-                  onClick={cancelEdit}
-                  className="inline-flex items-center justify-center px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
-
-        {/* Projects Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {listLoading &&
-            Array.from({ length: pageSize }).map((_, idx) => (
-              <div
-                key={`skeleton-${idx}`}
-                className="bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 animate-pulse"
-              >
-                <div className="h-5 w-1/2 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div>
-                <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mb-6"></div>
-                <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
-                <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded"></div>
-              </div>
-            ))}
-          {!listLoading && filteredSorted.length === 0 ? (
-            <div className="sm:col-span-2 lg:col-span-3 bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-12 text-center border border-gray-200 dark:border-gray-700">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-8 h-8 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
-                {items.length === 0 && query.trim() === ""
-                  ? "No projects yet"
-                  : "No projects found"}
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                {items.length === 0 && query.trim() === ""
-                  ? "Create your first project to get started"
-                  : query.trim()
-                    ? "Try adjusting your search or create a new project"
-                    : "Try refreshing or create a new project"}
-              </p>
-              {items.length === 0 && query.trim() === "" && (
-                <button
-                  onClick={() =>
-                    document.querySelector('input[type="text"]')?.focus()
-                  }
-                  className="px-3 py-1.5 text-sm bg-gradient-to-r from-emerald-600 to-blue-600 text-white rounded-xl hover:from-emerald-700 hover:to-blue-700 transition-all"
-                >
-                  Create Your First Project
-                </button>
-              )}
-            </div>
+                  <Button leftIcon={<Plus size={15} />} onClick={openCreate}>
+                    Create project
+                  </Button>
+                )
+              }
+            />
           ) : (
-            paginated.map((project) => (
-              <div
-                key={project._id}
-                className="bg-white dark:bg-surface-elevated rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-200"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {paginated.map((project) => (
+                <Card key={project._id} interactive className="flex flex-col p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <h2 className="min-w-0 flex-1 truncate font-display text-title-sm font-semibold text-white">
                       {project.name}
-                    </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {project.description || "No description"}
-                    </p>
-                    <div className="mt-2 text-xs text-gray-400">
-                      <span>
-                        Updated{" "}
-                        {project.updatedAt
-                          ? new Date(project.updatedAt).toLocaleString()
-                          : "—"}
-                      </span>
+                    </h2>
+                    {/* Actions stay visible rather than appearing on hover —
+                        hover-only controls are unreachable on touch. */}
+                    <div className="-mr-1.5 -mt-1 flex shrink-0 items-center">
+                      <IconButton
+                        label="Edit project"
+                        icon={Pencil}
+                        size="sm"
+                        onClick={() => openEdit(project)}
+                      />
+                      <IconButton
+                        label="Delete project"
+                        icon={Trash2}
+                        size="sm"
+                        variant="danger"
+                        onClick={() => setShowDeleteConfirm(project._id)}
+                      />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => onEdit(project)}
-                      className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all duration-200"
-                      title="Edit project"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => setShowDeleteConfirm(project._id)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
-                      title="Delete project"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
 
-                <div className="flex gap-2">
-                  <Link
-                    to={`/projects/${project._id}`}
-                    className="flex-1 inline-flex items-center justify-center px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-lg hover:from-emerald-700 hover:to-blue-700 transition-all duration-200 text-xs"
-                  >
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                  <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-slate-400">
+                    {project.description || 'No description'}
+                  </p>
+
+                  <p className="mt-3 text-xs text-slate-500">{formatUpdated(project.updatedAt)}</p>
+
+                  <div className="mt-5 flex gap-2 border-t border-line pt-4">
+                    <Button
+                      as={Link}
+                      to={`/projects/${project._id}`}
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1"
+                      leftIcon={<Settings2 size={14} />}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    Manage
-                  </Link>
-                  <Link
-                    to={`/projects/${project._id}/chat`}
-                    className="flex-1 inline-flex items-center justify-center px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 text-xs"
-                  >
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                      Manage
+                    </Button>
+                    <Button
+                      as={Link}
+                      to={`/projects/${project._id}/chat`}
+                      size="sm"
+                      className="flex-1"
+                      leftIcon={<MessageSquare size={14} />}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                      />
-                    </svg>
-                    Chat
-                  </Link>
-                </div>
-              </div>
-            ))
+                      Chat
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
           )}
         </div>
 
         {/* Pagination */}
-        {!listLoading && filteredSorted.length > 0 && (
-          <div className="flex items-center justify-between mt-6 text-xs text-gray-600 dark:text-gray-300">
-            <div>
-              Showing {(page - 1) * pageSize + 1}–
-              {Math.min(page * pageSize, filteredSorted.length)} of{" "}
+        {!listLoading && filteredSorted.length > 0 && totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-between border-t border-line pt-5">
+            <p className="tnum text-[13px] text-slate-500">
+              {start + 1}–{Math.min(start + pageSize, filteredSorted.length)} of{' '}
               {filteredSorted.length}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
+            </p>
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="secondary"
+                size="sm"
+                leftIcon={<ChevronLeft size={14} />}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+                disabled={currentPage === 1}
               >
-                Prev
-              </button>
-              <span>
-                Page {page} of {totalPages}
+                Previous
+              </Button>
+              <span className="tnum px-2 text-[13px] text-slate-400">
+                {currentPage} / {totalPages}
               </span>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
+                rightIcon={<ChevronRight size={14} />}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+                disabled={currentPage === totalPages}
               >
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         )}
+      </Container>
 
-        {/* Delete Confirmation Modal */}
-        {showDeleteConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-surface-elevated rounded-2xl shadow-xl max-w-md w-full p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-6 h-6 text-red-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                    Delete Project
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-xs">
-                    This action cannot be undone
-                  </p>
-                </div>
-              </div>
-
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                Are you sure you want to delete this project? All associated
-                prompts and chat history will be permanently removed.
-              </p>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => onDelete(showDeleteConfirm)}
-                  disabled={loading}
-                  className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-all duration-200 disabled:opacity-50"
-                >
-                  {loading ? (
-                    <>
-                      <svg
-                        className="w-4 h-4 mr-2 animate-spin"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Deleting...
-                    </>
-                  ) : (
-                    "Delete Project"
-                  )}
-                </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(null)}
-                  className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200"
-                >
-                  Cancel
-                </button>
-              </div>
+      {/* Create / edit dialog */}
+      <Modal
+        open={formOpen}
+        onClose={closeForm}
+        title={editingProject ? 'Edit project' : 'New project'}
+        description={
+          editingProject
+            ? 'Update the name and description for this project.'
+            : 'Give your project a name. You can add prompts once it exists.'
+        }
+      >
+        <form id="project-form" onSubmit={editingProject ? onUpdate : onCreate} className="space-y-4">
+          {error && (
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-lg border border-rose-500/25 bg-rose-500/10 px-3.5 py-3"
+            >
+              <AlertCircle size={16} className="mt-px shrink-0 text-rose-400" aria-hidden="true" />
+              <p className="text-[13px] leading-relaxed text-rose-200">{error}</p>
             </div>
+          )}
+
+          <Input
+            label="Project name"
+            placeholder="e.g. Customer Support Bot"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+            required
+          />
+
+          <Textarea
+            label="Description"
+            rows={3}
+            placeholder="What is this agent for?"
+            hint="Optional — helps you tell projects apart later."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+
+          <div className="flex justify-end gap-2.5 pt-1">
+            <Button type="button" variant="ghost" onClick={closeForm} disabled={loading}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={loading} disabled={!name.trim()}>
+              {editingProject ? 'Save changes' : 'Create project'}
+            </Button>
           </div>
-        )}
-      </div>
+        </form>
+      </Modal>
+
+      {/* Delete confirmation */}
+      <Modal
+        open={!!showDeleteConfirm}
+        onClose={() => !loading && setShowDeleteConfirm(null)}
+        size="sm"
+        title="Delete project?"
+        description="All prompts and chat history for this project will be permanently removed. This cannot be undone."
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setShowDeleteConfirm(null)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button variant="danger" loading={loading} onClick={() => onDelete(showDeleteConfirm)}>
+              Delete project
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[13px] leading-relaxed text-slate-400">
+          {items.find((p) => p._id === showDeleteConfirm)?.name ? (
+            <>
+              You are about to delete{' '}
+              <span className="font-medium text-slate-200">
+                {items.find((p) => p._id === showDeleteConfirm).name}
+              </span>
+              .
+            </>
+          ) : (
+            'You are about to delete this project.'
+          )}
+        </p>
+      </Modal>
     </Page>
   );
 };

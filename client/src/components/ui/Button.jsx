@@ -3,40 +3,41 @@ import { cn } from '../../lib/cn';
 import Spinner from './Spinner';
 
 const base =
-  'relative inline-flex items-center justify-center gap-2 font-medium whitespace-nowrap rounded-lg ' +
-  'transition-colors duration-150 select-none ' +
-  'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface ' +
-  'disabled:opacity-50 disabled:pointer-events-none';
+  'relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium ' +
+  'select-none transition-[background-color,border-color,color,opacity] duration-150 ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 ' +
+  'focus-visible:ring-offset-2 focus-visible:ring-offset-surface ' +
+  'active:translate-y-px disabled:pointer-events-none disabled:opacity-45';
 
+/**
+ * Variants are a closed set on purpose. If a call site wants a colour that
+ * isn't here, the answer is almost always one of these — not a new gradient.
+ */
 const variants = {
-  // Solid indigo — confident, flat, no glow. The default CTA.
-  primary: 'bg-brand-600 text-white hover:bg-brand-500 active:bg-brand-700 shadow-subtle',
-  // Near-white solid — high-contrast alternative for light-on-dark CTAs.
-  contrast: 'bg-slate-100 text-slate-900 hover:bg-white active:bg-slate-200 shadow-subtle',
-  // Quiet graphite
-  secondary: 'bg-white/[0.06] text-slate-100 border border-line hover:bg-white/[0.1] hover:border-line-strong',
-  // Minimal
+  primary: 'bg-brand-600 text-white shadow-subtle hover:bg-brand-500 active:bg-brand-700',
+  secondary:
+    'border border-line bg-white/[0.06] text-slate-100 hover:border-line-strong hover:bg-white/[0.1]',
+  outline: 'border border-line-strong text-slate-200 hover:bg-white/[0.05] hover:text-white',
   ghost: 'text-slate-300 hover:bg-white/[0.06] hover:text-white',
-  // Outlined hairline
-  outline: 'border border-line-strong text-slate-200 hover:bg-white/[0.04] hover:border-slate-500',
-  // Destructive
-  danger: 'bg-rose-600 text-white hover:bg-rose-500 active:bg-rose-700 shadow-subtle',
-  // Opt-in gradient — use sparingly, e.g. a single hero CTA.
-  gradient: 'bg-brand-gradient text-white hover:brightness-[1.08] shadow-subtle',
+  danger: 'bg-rose-600 text-white shadow-subtle hover:bg-rose-500 active:bg-rose-700',
+  // Reads as a link, hits like a button.
+  link: 'text-brand-300 underline-offset-4 hover:text-brand-200 hover:underline active:translate-y-0',
 };
 
 const sizes = {
   xs: 'h-7 px-2.5 text-xs',
   sm: 'h-8 px-3 text-[13px]',
   md: 'h-9 px-3.5 text-sm',
-  lg: 'h-11 px-5 text-[15px]',
-  icon: 'h-9 w-9 p-0',
+  lg: 'h-10 px-4 text-sm',
+  xl: 'h-11 px-5 text-[15px]',
 };
 
 /**
- * Button — solid, restrained, product-grade. No magnetic gimmicks, no glow by
- * default. `as` lets it render as a Link/anchor; `loading`, `leftIcon`,
- * `rightIcon` round out the API.
+ * Button — the single call-to-action primitive.
+ *
+ * `as` renders it as a Link or anchor while keeping the visual contract.
+ * While `loading`, the spinner takes the leading icon's slot rather than
+ * replacing the label, so the control never changes width mid-request.
  */
 const Button = forwardRef(function Button(
   {
@@ -47,24 +48,33 @@ const Button = forwardRef(function Button(
     loading = false,
     leftIcon = null,
     rightIcon = null,
+    fullWidth = false,
     children,
     disabled,
+    type,
     ...props
   },
   ref
 ) {
-  const classes = cn(base, variants[variant] || variants.primary, sizes[size] || sizes.md, className);
+  const isButton = Comp === 'button';
 
   return (
     <Comp
       ref={ref}
-      className={classes}
-      disabled={Comp === 'button' ? disabled || loading : undefined}
+      type={isButton ? type || 'button' : undefined}
+      disabled={isButton ? disabled || loading : undefined}
       aria-busy={loading || undefined}
+      aria-disabled={!isButton && (disabled || loading) ? true : undefined}
+      className={cn(
+        base,
+        variants[variant] || variants.primary,
+        variant === 'link' ? 'h-auto px-0' : sizes[size] || sizes.md,
+        fullWidth && 'w-full',
+        className
+      )}
       {...props}
     >
-      {loading && <Spinner size="xs" className="text-current" />}
-      {!loading && leftIcon}
+      {loading ? <Spinner size="xs" className="text-current" /> : leftIcon}
       {children}
       {!loading && rightIcon}
     </Comp>

@@ -1,55 +1,79 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import Container from './ui/Container.jsx';
+import { Container, Logo } from './ui';
 
-const Footer = () => {
-  return (
-    <footer className="border-t border-white/10 bg-surface">
-      <Container className="py-8 pt-16">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="text-center md:text-left">
-            <p className="text-sm text-gray-400">© {new Date().getFullYear()} Chatbot AI Platform</p>
-            <p className="text-xs text-gray-500">Built for modern, secure, and delightful AI chat experiences.</p>
-          </div>
+/**
+ * Only routes that exist are links. Placeholder anchors to `#pricing` and
+ * `#docs` were dead ends — they now read as plain text until those pages ship,
+ * which is more honest than a link that goes nowhere.
+ */
+const columns = [
+  {
+    title: 'Product',
+    links: [
+      { label: 'Features', to: '/features' },
+      { label: 'Projects', to: '/projects' },
+      { label: 'Dashboard', to: '/dashboard' },
+    ],
+  },
+  {
+    title: 'Resources',
+    items: ['Documentation', 'API reference', 'Changelog'],
+  },
+  {
+    title: 'Legal',
+    items: ['Privacy', 'Terms', 'Security'],
+  },
+];
 
-          <nav className="flex items-center gap-2">
-            <Link
-              to="/features"
-              className="px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200"
-            >
-              Features
-            </Link>
-            <a
-              href="#pricing"
-              className="px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200"
-            >
-              Pricing
-            </a>
-            <a
-              href="#docs"
-              className="px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200"
-            >
-              Docs
-            </a>
-            <a
-              href="#privacy"
-              className="px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200"
-            >
-              Privacy
-            </a>
-            <a
-              href="#terms"
-              className="px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200"
-            >
-              Terms
-            </a>
-          </nav>
+const Footer = () => (
+  <footer className="mt-24 border-t border-line bg-surface-sunken/40">
+    <Container className="py-12">
+      <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_repeat(3,1fr)]">
+        <div className="max-w-xs">
+          <Logo size="sm" />
+          <p className="mt-3.5 text-[13px] leading-relaxed text-slate-500">
+            Build, configure, and ship AI chat agents with reusable prompts and streaming responses.
+          </p>
         </div>
-      </Container>
-    </footer>
-  );
-};
+
+        {columns.map((column) => (
+          <div key={column.title}>
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">
+              {column.title}
+            </h2>
+            <ul className="mt-3.5 space-y-2.5">
+              {column.links?.map((link) => (
+                <li key={link.label}>
+                  <Link
+                    to={link.to}
+                    className="focus-ring rounded text-[13px] text-slate-400 transition-colors hover:text-white"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+              {column.items?.map((item) => (
+                <li key={item} className="text-[13px] text-slate-600">
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-10 flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-[13px] text-slate-500">
+          © {new Date().getFullYear()} Chatbot AI. All rights reserved.
+        </p>
+        <p className="inline-flex items-center gap-2 text-[13px] text-slate-500">
+          <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-emerald-400" />
+          All systems operational
+        </p>
+      </div>
+    </Container>
+  </footer>
+);
 
 export default Footer;
-
-

@@ -1,28 +1,28 @@
 import React, { forwardRef } from 'react';
-import { motion } from 'framer-motion';
 import { cn } from '../../lib/cn';
 
 const surfaces = {
-  raised: 'bg-surface-raised border border-line shadow-subtle',
-  elevated: 'bg-surface-elevated border border-line shadow-floating',
-  glass: 'glass',
-  outline: 'bg-transparent border border-line',
-  gradient: 'border border-line bg-gradient-to-b from-white/[0.03] to-transparent shadow-subtle',
+  raised: 'border border-line bg-surface-raised shadow-subtle',
+  elevated: 'border border-line bg-surface-elevated shadow-floating',
+  outline: 'border border-line bg-transparent',
+  // Barely-there fill for nested panels inside an already-raised card.
+  inset: 'border border-line-subtle bg-white/[0.02]',
 };
+
+const paddings = { none: '', sm: 'p-4', md: 'p-5', lg: 'p-6' };
 
 /**
  * Card — the base surface primitive.
  *
- * Backward compatible: <Card className="..."> still works.
- * New props: variant (raised|elevated|glass|outline|gradient), interactive,
- * glow, padding (sm|md|lg|none), as.
+ * `interactive` is a CSS-only border/fill shift rather than a transform lift:
+ * a grid of cards that all rise on hover reads as a template, and the motion
+ * budget is better spent on transitions that carry meaning.
  */
 const Card = forwardRef(function Card(
   {
     as: Comp = 'div',
     variant = 'raised',
     interactive = false,
-    glow = false,
     padding = 'none',
     className = '',
     children,
@@ -30,50 +30,46 @@ const Card = forwardRef(function Card(
   },
   ref
 ) {
-  const pad = { none: '', sm: 'p-4', md: 'p-6', lg: 'p-8' }[padding] || '';
-  const MotionComp = interactive ? motion(Comp) : Comp;
-
   return (
-    <MotionComp
+    <Comp
       ref={ref}
       className={cn(
         'rounded-xl',
         surfaces[variant] || surfaces.raised,
-        pad,
+        paddings[padding] || '',
         interactive &&
-          'cursor-pointer transition-colors duration-150 hover:border-line-strong hover:bg-white/[0.02]',
-        glow && 'hover:border-brand-500/40',
+          'transition-colors duration-150 hover:border-line-strong hover:bg-white/[0.025]',
         className
       )}
-      {...(interactive
-        ? { whileHover: { y: -2 }, transition: { type: 'spring', stiffness: 320, damping: 26 } }
-        : {})}
       {...props}
     >
       {children}
-    </MotionComp>
+    </Comp>
   );
 });
 
 export function CardHeader({ className = '', children, ...props }) {
   return (
-    <div className={cn('flex items-start justify-between gap-4 p-6 pb-0', className)} {...props}>
+    <div className={cn('flex items-start justify-between gap-4 p-5 pb-0', className)} {...props}>
       {children}
     </div>
   );
 }
 
-export function CardTitle({ className = '', children, ...props }) {
+export function CardTitle({ as: Comp = 'h3', className = '', children, ...props }) {
   return (
-    <h3 className={cn('font-display text-lg font-semibold text-white', className)} {...props}>
+    <Comp
+      className={cn('font-display text-title-sm font-semibold text-white', className)}
+      {...props}
+    >
       {children}
-    </h3>
+    </Comp>
   );
 }
 
 export function CardDescription({ className = '', children, ...props }) {
   return (
-    <p className={cn('text-sm text-slate-400', className)} {...props}>
+    <p className={cn('mt-1 text-[13px] leading-relaxed text-slate-400', className)} {...props}>
       {children}
     </p>
   );
@@ -81,7 +77,7 @@ export function CardDescription({ className = '', children, ...props }) {
 
 export function CardBody({ className = '', children, ...props }) {
   return (
-    <div className={cn('p-6', className)} {...props}>
+    <div className={cn('p-5', className)} {...props}>
       {children}
     </div>
   );
@@ -89,7 +85,10 @@ export function CardBody({ className = '', children, ...props }) {
 
 export function CardFooter({ className = '', children, ...props }) {
   return (
-    <div className={cn('flex items-center gap-3 p-6 pt-0', className)} {...props}>
+    <div
+      className={cn('flex items-center gap-2.5 border-t border-line px-5 py-3.5', className)}
+      {...props}
+    >
       {children}
     </div>
   );

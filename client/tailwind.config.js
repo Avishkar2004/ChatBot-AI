@@ -1,19 +1,50 @@
 /** @type {import('tailwindcss').Config} */
+
+/**
+ * Design tokens.
+ *
+ * One accent (brand indigo). Semantic colours are reserved for state —
+ * emerald = success, amber = warning, rose = danger — and are never used
+ * decoratively. Depth comes from the surface ramp plus hairline borders,
+ * not from glow.
+ */
 module.exports = {
   darkMode: 'class',
-  content: [
-    "./src/**/*.{js,jsx,ts,tsx}",
-  ],
+  content: ['./src/**/*.{js,jsx,ts,tsx}'],
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'],
+        sans: [
+          'Inter',
+          'ui-sans-serif',
+          'system-ui',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'Noto Sans',
+          'Apple Color Emoji',
+          'Segoe UI Emoji',
+        ],
         display: ['"Plus Jakarta Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
+
+      /**
+       * Display sizes carry their own tracking + leading so headings stay
+       * optically tight at every breakpoint. Body text uses the stock ramp.
+       */
+      fontSize: {
+        'display-xl': ['3.5rem', { lineHeight: '1.04', letterSpacing: '-0.035em' }],
+        'display-lg': ['2.75rem', { lineHeight: '1.08', letterSpacing: '-0.032em' }],
+        display: ['2.25rem', { lineHeight: '1.12', letterSpacing: '-0.028em' }],
+        'display-sm': ['1.75rem', { lineHeight: '1.18', letterSpacing: '-0.024em' }],
+        title: ['1.25rem', { lineHeight: '1.35', letterSpacing: '-0.016em' }],
+        'title-sm': ['1.0625rem', { lineHeight: '1.4', letterSpacing: '-0.012em' }],
+      },
+
       colors: {
-        // Primary brand ramp — electric blue → indigo → violet.
-        // Kept under the `brand` key so existing `brand-*` utilities keep working.
+        // Primary accent — the only decorative colour in the system.
         brand: {
           DEFAULT: '#6366f1',
           50: '#eef2ff',
@@ -28,122 +59,85 @@ module.exports = {
           900: '#312e81',
           950: '#1e1b4b',
         },
-        // Violet — the warmer end of the primary spectrum, used for gradients/glows.
-        violet: {
-          DEFAULT: '#8b5cf6',
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-        },
-        // Electric blue — the cooler end, used for highlights and links.
-        electric: {
-          DEFAULT: '#3b82f6',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-        },
-        // Accent — cyan + emerald for success / secondary highlights.
-        cyan: {
-          DEFAULT: '#22d3ee',
-          400: '#22d3ee',
-          500: '#06b6d4',
-          600: '#0891b2',
-        },
-        // Graphite surface system — layered depth from base → elevated → floating.
+        // Secondary hues — reserved for the logo gradient and rare accents.
+        violet: { DEFAULT: '#8b5cf6', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed' },
+        electric: { DEFAULT: '#3b82f6', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb' },
+
+        // Surface ramp — every elevation step is a real token, never an opacity guess.
         surface: {
-          DEFAULT: '#0a0b0f',   // app background (deep graphite)
+          DEFAULT: '#0a0b0f',
           base: '#0a0b0f',
-          sunken: '#070809',    // recessed wells
-          raised: '#101218',    // cards
-          elevated: '#161922',  // popovers / elevated cards
-          floating: '#1c2029',  // menus / modals
-          muted: '#22262f',     // hover fills, inputs
+          sunken: '#070809',
+          raised: '#101218',
+          elevated: '#161922',
+          floating: '#1c2029',
+          muted: '#22262f',
         },
-        // Hairline borders tuned for graphite surfaces.
+
+        // Hairlines. `strong` is for hover/active borders only.
         line: {
           DEFAULT: 'rgba(255,255,255,0.08)',
-          subtle: 'rgba(255,255,255,0.06)',
+          subtle: 'rgba(255,255,255,0.05)',
           strong: 'rgba(255,255,255,0.14)',
         },
       },
+
+      // Controls: lg. Cards: xl. Overlays: 2xl. Nothing rounder.
       borderRadius: {
-        '4xl': '2rem',
-        '5xl': '2.5rem',
+        lg: '0.5rem',
+        xl: '0.75rem',
+        '2xl': '1rem',
       },
+
       boxShadow: {
-        // Premium layered depth — softer, more diffuse than default Tailwind.
-        'subtle': '0 1px 2px rgba(0,0,0,0.4), 0 1px 1px rgba(0,0,0,0.25)',
-        'raised': '0 2px 4px rgba(0,0,0,0.4), 0 8px 24px -8px rgba(0,0,0,0.5)',
-        'floating': '0 8px 16px -4px rgba(0,0,0,0.5), 0 24px 48px -12px rgba(0,0,0,0.6)',
-        'overlay': '0 16px 32px -8px rgba(0,0,0,0.6), 0 40px 80px -16px rgba(0,0,0,0.7)',
-        // Colored glows for primary / accent emphasis.
-        'glow-brand': '0 0 0 1px rgba(99,102,241,0.35), 0 8px 32px -8px rgba(99,102,241,0.5)',
-        'glow-violet': '0 0 40px -8px rgba(139,92,246,0.55)',
-        'glow-cyan': '0 0 40px -8px rgba(34,211,238,0.5)',
+        subtle: '0 1px 2px rgba(0,0,0,0.4), 0 1px 1px rgba(0,0,0,0.24)',
+        raised: '0 2px 4px rgba(0,0,0,0.4), 0 8px 24px -8px rgba(0,0,0,0.5)',
+        floating: '0 8px 16px -4px rgba(0,0,0,0.5), 0 24px 48px -12px rgba(0,0,0,0.6)',
+        overlay: '0 16px 32px -8px rgba(0,0,0,0.6), 0 40px 80px -16px rgba(0,0,0,0.7)',
         'inner-top': 'inset 0 1px 0 0 rgba(255,255,255,0.06)',
+        // The only coloured shadow in the system — focus/selection affordance.
+        'ring-brand': '0 0 0 1px rgba(99,102,241,0.4)',
       },
+
       backgroundImage: {
-        'brand-gradient': 'linear-gradient(135deg, #3b82f6 0%, #6366f1 45%, #8b5cf6 100%)',
-        'brand-gradient-soft': 'linear-gradient(135deg, rgba(59,130,246,0.16) 0%, rgba(99,102,241,0.16) 50%, rgba(139,92,246,0.16) 100%)',
-        'aurora': 'radial-gradient(60% 60% at 20% 20%, rgba(99,102,241,0.30) 0%, transparent 60%), radial-gradient(50% 50% at 80% 25%, rgba(34,211,238,0.22) 0%, transparent 55%), radial-gradient(60% 60% at 60% 90%, rgba(139,92,246,0.28) 0%, transparent 60%)',
-        'mesh': 'radial-gradient(at 27% 37%, rgba(59,130,246,0.18) 0, transparent 45%), radial-gradient(at 79% 33%, rgba(139,92,246,0.16) 0, transparent 45%), radial-gradient(at 48% 82%, rgba(34,211,238,0.12) 0, transparent 45%)',
-        'noise': "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E\")",
+        'brand-gradient': 'linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)',
       },
+
       keyframes: {
-        'gradient-pan': {
-          '0%, 100%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
-        },
-        'aurora-drift': {
-          '0%': { transform: 'translate3d(0,0,0) rotate(0deg) scale(1)' },
-          '33%': { transform: 'translate3d(2%, -3%, 0) rotate(2deg) scale(1.05)' },
-          '66%': { transform: 'translate3d(-2%, 2%, 0) rotate(-2deg) scale(0.98)' },
-          '100%': { transform: 'translate3d(0,0,0) rotate(0deg) scale(1)' },
-        },
-        'float': {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-10px)' },
-        },
-        'pulse-glow': {
-          '0%, 100%': { boxShadow: '0 0 24px -6px rgba(99,102,241,0.45)' },
-          '50%': { boxShadow: '0 0 48px -4px rgba(139,92,246,0.7)' },
-        },
-        'shimmer': {
-          '100%': { transform: 'translateX(100%)' },
-        },
+        shimmer: { '100%': { transform: 'translateX(100%)' } },
         'fade-up': {
-          '0%': { opacity: '0', transform: 'translateY(12px)' },
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        'fade-in': { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
         'scale-in': {
-          '0%': { opacity: '0', transform: 'scale(0.96)' },
+          '0%': { opacity: '0', transform: 'scale(0.97)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
-        'thinking-pulse': {
-          '0%, 100%': { opacity: '0.35', transform: 'scale(0.85)' },
-          '50%': { opacity: '1', transform: 'scale(1)' },
+        spin: { to: { transform: 'rotate(360deg)' } },
+        // Status-only pulse — signals liveness, never decoration.
+        'pulse-dot': {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.4', transform: 'scale(0.82)' },
         },
-        'spin-slow': {
-          'to': { transform: 'rotate(360deg)' },
-        },
+        caret: { '0%, 45%': { opacity: '1' }, '55%, 100%': { opacity: '0' } },
       },
+
       animation: {
-        'gradient': 'gradient-pan 6s ease infinite',
-        'aurora': 'aurora-drift 24s ease-in-out infinite',
-        'float': 'float 6s ease-in-out infinite',
-        'pulse-glow': 'pulse-glow 3s ease-in-out infinite',
-        'shimmer': 'shimmer 1.8s infinite',
-        'fade-up': 'fade-up 0.5s cubic-bezier(0.22,1,0.36,1) both',
-        'scale-in': 'scale-in 0.25s cubic-bezier(0.22,1,0.36,1) both',
-        'thinking': 'thinking-pulse 1.2s ease-in-out infinite',
-        'spin-slow': 'spin-slow 1s linear infinite',
+        shimmer: 'shimmer 1.6s infinite',
+        'fade-up': 'fade-up 0.32s cubic-bezier(0.22,1,0.36,1) both',
+        'fade-in': 'fade-in 0.24s ease-out both',
+        'scale-in': 'scale-in 0.18s cubic-bezier(0.22,1,0.36,1) both',
+        'spin-slow': 'spin 0.7s linear infinite',
+        'pulse-dot': 'pulse-dot 2s ease-in-out infinite',
+        caret: 'caret 1.05s step-end infinite',
       },
+
       transitionTimingFunction: {
-        'spring': 'cubic-bezier(0.22, 1, 0.36, 1)',
-        'snap': 'cubic-bezier(0.4, 0, 0.2, 1)',
+        spring: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        snap: 'cubic-bezier(0.4, 0, 0.2, 1)',
       },
     },
   },
   plugins: [],
-}
+};
