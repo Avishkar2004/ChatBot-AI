@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { addContext } from "../lib/logger.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "Avishkar";
 
@@ -17,6 +18,8 @@ export const requireAuth = (req, res, next) => {
       username: payload.username,
       email: payload.email,
     };
+    // Tag every subsequent log line in this request with the caller.
+    addContext({ userId: req.user.id });
     return next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid or expired token" });

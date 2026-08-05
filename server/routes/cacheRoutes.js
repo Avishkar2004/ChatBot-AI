@@ -1,19 +1,23 @@
 import { Router } from "express";
 import requireAuth from "../middleware/auth.js";
+import requireAdmin from "../middleware/requireAdmin.js";
 import redisCache from "../services/redisCache.js";
 import redisClient from "../config/redis.js";
+import { CACHE_CONFIG } from "../middleware/apiCache.js";
+import logger from "../lib/logger.js";
 
 const router = Router();
 
-// All cache routes require authentication
+// All cache routes require authentication; destructive ones also require admin.
 router.use(requireAuth);
 
-// Get cache statistics
-router.get("/stats", async (req, res) => {
+// Get cache statistics (Redis internals — admins only)
+router.get("/stats", requireAdmin, async (req, res) => {
   try {
     const stats = await redisCache.getCacheStats();
     res.json({
       cache: stats,
+      config: CACHE_CONFIG,
       timestamp: new Date().toISOString(),
       status: "OK",
     });
@@ -46,8 +50,8 @@ router.delete("/user", async (req, res) => {
   }
 });
 
-// Clear specific cache by pattern
-router.delete("/pattern/:pattern", async (req, res) => {
+// Clear specific cache by pattern (crosses user boundaries — admins only)
+router.delete("/pattern/:pattern", requireAdmin, async (req, res) => {
   try {
     const { pattern } = req.params;
     await redisCache.invalidateCacheByPattern(pattern);
@@ -67,11 +71,11 @@ router.delete("/pattern/:pattern", async (req, res) => {
 });
 
 // Clear all cache (admin only - be careful!)
-router.delete("/all", async (req, res) => {
+router.delete("/all", requireAdmin, async (req, res) => {
   try {
-    // In production, you'd want additional admin checks here
     const client = redisClient.getClient();
     await client.flushAll();
+    logger.warn("cache_flush_all", { userId: req.user.id });
 
     res.json({
       message: "All cache cleared successfully",

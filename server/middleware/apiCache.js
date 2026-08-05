@@ -7,7 +7,7 @@ import crypto from "crypto";
  */
 
 // Cache configuration for different endpoint types
-const CACHE_CONFIG = {
+export const CACHE_CONFIG = {
   // User-related endpoints
   "/api/users/me": { ttl: 300, key: "user_profile" }, // 5 minutes
   "/api/users/profile": { ttl: 300, key: "user_profile" },
@@ -265,24 +265,10 @@ export const warmCache = (endpoints = []) => {
   };
 };
 
-/**
- * Cache statistics middleware
- */
-export const cacheStats = async (req, res, next) => {
-  if (req.path === "/api/cache/stats") {
-    try {
-      const stats = await redisCache.getCacheStats();
-      return res.json({
-        cache: stats,
-        config: CACHE_CONFIG,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      return res.status(500).json({ error: "Failed to get cache stats" });
-    }
-  }
-  next();
-};
+// NOTE: cache statistics used to be served by a global middleware that
+// short-circuited /api/cache/stats before any auth ran, leaking Redis
+// internals to anonymous callers. Stats now live on the authenticated
+// router in routes/cacheRoutes.js — do not reintroduce a global handler here.
 
 /**
  * Conditional caching based on user role or other factors

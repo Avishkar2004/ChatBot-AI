@@ -3,20 +3,31 @@ import "dotenv/config";
 import connectDB from "./config/db.js";
 import redisClient from "./config/redis.js";
 import cors from "cors";
-import {
-  apiCache,
-  cacheStats,
-  invalidateCache,
-} from "./middleware/apiCache.js";
+import { apiCache } from "./middleware/apiCache.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import promptRoutes from "./routes/promptRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import cacheRoutes from "./routes/cacheRoutes.js";
-import morgan from "morgan";
+import metricsRoutes from "./routes/metricsRoutes.js";
+import logger from "./lib/logger.js";
+import {
+  requestContext,
+  httpLogger,
+  errorHandler,
+  installProcessHandlers,
+} from "./middleware/observability.js";
+
 const PORT = process.env.PORT || 8080;
 const app = express();
+
+installProcessHandlers();
+
+// Observability first: everything downstream inherits the request ID.
+app.set("trust proxy", true);
+app.use(requestContext);
+app.use(httpLogger);
 
 // Middleware
 app.use(
@@ -73,7 +84,7 @@ app.use(
     origin: function (origin, callback) {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (isAllowedOrigin(origin)) return callback(null, true);
-      console.warn("CORS blocked origin:", origin, "Allowed:", allowedOrigins);
+      logger.warn("cors_blocked_origin", { origin, allowed: allowedOrigins });
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
@@ -96,63 +107,60 @@ app.use(
 // NOTE: Express/path-to-regexp versions can throw on "*" routes. Regex works reliably.
 app.options(/.*/, cors());
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan("dev"));
-
-// API Caching middleware
-app.use(cacheStats);
 
 // Initialize all connections before starting server
 const initializeServer = async () => {
   try {
-    console.log("Initializing Chatbot AI Server...\n");
+    logger.info("server_initializing", { env: process.env.NODE_ENV || "development" });
 
-    // Connect to MongoDB
-    console.log("Connecting to MongoDB...");
     await connectDB();
-    console.log("MongoDB connected successfully\n");
+    logger.info("mongodb_connected");
 
     // Connect to Redis (optional — server still starts if this fails)
-    console.log("Connecting to Redis...");
     const redisConnected = await redisClient.connect();
 
     if (redisConnected) {
-      console.log("Redis connected successfully\n");
-
-      console.log("Testing Redis operations...");
       await redisClient.set("test:health", "ok", 10);
       const result = await redisClient.get("test:health");
       await redisClient.del("test:health");
-
-      if (result === "ok") {
-        console.log("Redis health check passed\n");
-      } else {
-        console.log("Redis health check failed, but continuing...\n");
-      }
+      logger.info("redis_connected", { healthCheck: result === "ok" ? "pass" : "fail" });
     } else {
-      console.log("Redis unavailable — continuing with limited functionality\n");
+      logger.warn("redis_unavailable", {
+        impact: "caching and hot-window chat history disabled",
+      });
     }
 
-    // Start the server
-    console.log("Starting HTTP server...");
+    if (!process.env.ADMIN_EMAILS) {
+      logger.warn("admin_emails_unset", {
+        impact: "/api/cache admin routes and /api/metrics will reject everyone",
+      });
+    }
+
     app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log(`Health check: http://localhost:${PORT}/health`);
-      console.log(`Cache stats: http://localhost:${PORT}/api/cache/stats`);
-      console.log("\nChatbot AI Server is ready!");
+      logger.info("server_listening", {
+        port: PORT,
+        health: `http://localhost:${PORT}/health`,
+        metrics: `http://localhost:${PORT}/api/metrics`,
+      });
     });
   } catch (error) {
-    console.error("Server initialization failed:", error);
-    console.log("\nTroubleshooting:");
-    console.log("\t1. Check MongoDB connection string");
-    console.log("\t2. Check Redis Cloud credentials (optional — server can run without Redis)");
-    console.log("\t3. Verify network connectivity");
-    console.log("\t4. Check firewall settings");
+    logger.error("server_initialization_failed", {
+      err: error,
+      hints: [
+        "Check MongoDB connection string",
+        "Check Redis credentials (optional — server can run without Redis)",
+        "Verify network connectivity and firewall settings",
+      ],
+    });
     process.exit(1);
   }
 };
 
-// Initialize everything
-initializeServer();
+// Initialize everything (skipped under test so the app can be imported without
+// opening MongoDB/Redis connections or binding a port).
+if (process.env.NODE_ENV !== "test") {
+  initializeServer();
+}
 
 // Basic route
 app.get("/", (req, res) => {
@@ -177,6 +185,8 @@ app.get("/health", apiCache({ ttl: 30 }), async (req, res) => {
     timestamp: new Date().toISOString(),
     database: "Connected",
     redis: redisStatus,
+    // Note: no requestId here — this response is cached for 30s, so the header
+    // (set per request) is the correlation source of truth for /health.
   });
 });
 
@@ -187,23 +197,10 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/projects", promptRoutes);
 app.use("/api/projects", chatRoutes);
 app.use("/api/cache", cacheRoutes);
+app.use("/api/metrics", metricsRoutes);
 
-// Global error handler
-app.use((error, req, res, next) => {
-  console.error("Global error handler:", error);
+// Structured error handler: logs with the request ID, counts the failure,
+// and forwards to the optional error webhook.
+app.use(errorHandler);
 
-  if (error instanceof SyntaxError && error.status === 400 && "body" in error) {
-    return res.status(400).json({
-      message: "Invalid JSON format",
-      error: "Please check your request body format",
-    });
-  }
-
-  res.status(500).json({
-    message: "Internal server error",
-    error:
-      process.env.NODE_ENV === "production"
-        ? "Something went wrong"
-        : error.message,
-  });
-});
+export default app;

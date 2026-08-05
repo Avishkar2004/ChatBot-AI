@@ -66,10 +66,52 @@ node test-db.js
 - `PUT /api/projects/:projectId/prompts/:promptId` — Update prompt
 - `DELETE /api/projects/:projectId/prompts/:promptId` — Delete prompt
 
-### Chat API (stub)
+### Chat API
 - `POST /api/projects/:projectId/chat` — Send `{ message }` and receive `{ reply }`
   - Backed by Groq if `GROQ_API_KEY` is set. Defaults to `GROQ_MODEL=llama-3.1-8b-instant`.
   - To change model, set `GROQ_MODEL` in `.env`.
+- `POST /api/projects/:projectId/chat/stream` — Same payload, streamed as SSE
+  (`data: {"delta":"..."}` frames, then `data: [DONE]`).
+- `GET /api/projects/:projectId/chat/history` — Durable history from MongoDB
+  (Redis serves the hot window; Mongo is the system of record).
+- `DELETE /api/projects/:projectId/chat/clear` — Delete the thread everywhere.
+
+### Admin API (Bearer token + `ADMIN_EMAILS` membership)
+- `GET /api/cache/stats` — Redis stats and cache TTL config
+- `DELETE /api/cache/all`, `DELETE /api/cache/pattern/:pattern` — destructive flushes
+- `GET /api/metrics` — JSON snapshot (`?format=prometheus` for text exposition)
+- `POST /api/metrics/log-level` — `{ "level": "debug" }` to change verbosity live
+- `POST /api/metrics/reset` — zero the counters
+
+`DELETE /api/cache/user` and `POST /api/cache/warm` remain available to any
+authenticated user because they only touch that user's keys.
+
+## Observability
+
+Every request gets a correlation ID (`X-Request-Id`, reused if the caller sends
+a well-formed one) that is attached to every log line and returned in error
+bodies, so a user report maps to exact log lines.
+
+- Logs are single-line JSON in production (`LOG_FORMAT=pretty` for a readable
+  dev format). Credentials are redacted and long strings truncated.
+- `/api/metrics` reports request counts, latency percentiles, error counts by
+  type, and token/cost totals per model.
+- Model spend is estimated from `MODEL_PRICING_JSON` (falls back to published
+  Groq list prices); unknown models are reported under `llm.unpricedModels`
+  rather than silently costed at zero.
+- Set `ERROR_WEBHOOK_URL` to forward unhandled errors to Slack or a relay.
+
+## Testing
+
+```bash
+npm test            # node:test, no external services required
+npm run test:watch
+npm run test:coverage
+```
+
+Tests stub Redis/MongoDB at the module boundary, so the suite runs offline.
+`NODE_ENV=test` also stops `app.js` from opening connections or binding a port,
+which lets the admin-route tests exercise the real middleware stack.
 
 #### Register
 ```bash
@@ -111,6 +153,13 @@ curl http://localhost:8080/api/auth/me \
 - `MONGODB_URI` - MongoDB connection string
 - `JWT_SECRET` - Secret for signing JWTs
 - `JWT_EXPIRES_IN` - Token TTL (e.g., `7d`)
+- `ADMIN_EMAILS` - Comma-separated admins for `/api/cache` and `/api/metrics`.
+  **Unset means nobody is an admin** — those endpoints return 403 for everyone.
+- `LOG_LEVEL` - `debug` | `info` | `warn` | `error` | `silent` (default `info`)
+- `LOG_FORMAT` - `json` (default in production) or `pretty`
+- `ERROR_WEBHOOK_URL` - Optional POST target for unhandled errors
+- `MODEL_PRICING_JSON` - Override token pricing, e.g.
+  `{"llama-3.1-8b-instant":{"prompt":0.05,"completion":0.08}}`
 
 ## Project Structure
 

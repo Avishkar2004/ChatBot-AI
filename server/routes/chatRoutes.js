@@ -6,6 +6,9 @@ import redisCache from "../services/redisCache.js";
 import conversationStore from "../services/conversationStore.js";
 import Project from "../models/Project.js";
 import Prompt from "../models/Prompt.js";
+import metrics from "../services/metrics.js";
+import logger from "../lib/logger.js";
+import { captureException } from "../middleware/observability.js";
 import Groq from "groq-sdk";
 import "dotenv/config";
 
@@ -15,7 +18,7 @@ router.use(requireAuth);
 
 const FALLBACK_MODEL = "llama-3.1-8b-instant";
 
-const normalizeModel = (m) => {
+export const normalizeModel = (m) => {
   if (!m) return FALLBACK_MODEL;
   const mm = m.toLowerCase().trim();
   // Map non-Groq or deprecated names to current Groq defaults
@@ -30,11 +33,36 @@ const normalizeModel = (m) => {
   return m; // assume caller passed a valid Groq model
 };
 
-const isDecommissionedError = (err) => {
+export const isDecommissionedError = (err) => {
   const msg = err?.response?.data || err?.message || "";
   return typeof msg === "string"
     ? msg.includes("model_decommissioned") || msg.includes("decommissioned")
     : false;
+};
+
+// Record token spend + latency for one model call, and log a cost line so a
+// single request can be traced from access log → tokens → dollars.
+const recordCompletion = ({ model, usage = {}, startedAt, streamed = false }) => {
+  const promptTokens = usage?.prompt_tokens || 0;
+  const completionTokens = usage?.completion_tokens || 0;
+  const durationMs = Date.now() - startedAt;
+
+  const costUsd = metrics.recordLlm({
+    model,
+    promptTokens,
+    completionTokens,
+    durationMs,
+    streamed,
+  });
+
+  logger.info("llm_completion", {
+    model,
+    streamed,
+    promptTokens,
+    completionTokens,
+    costUsd: Number(costUsd.toFixed(6)),
+    durationMs,
+  });
 };
 
 // Build the shared chat request context (project, prompts, messages, model).
@@ -116,7 +144,7 @@ router.get(
 
       return res.json({ messages: chatHistory, sessionId });
     } catch (e) {
-      console.error("Error fetching chat history:", e);
+      logger.error("chat_history_failed", { err: e });
       return res
         .status(500)
         .json({ message: "Failed to fetch chat history", error: e.message });
@@ -135,6 +163,7 @@ router.post(
 
     const { groq, messages, userMessage, sessionId, userId, projectId } = ctx;
     let { model } = ctx;
+    const startedAt = Date.now();
 
     try {
       let completion;
@@ -167,12 +196,20 @@ router.post(
         completion.usage,
       );
 
+      recordCompletion({ model, usage: completion.usage, startedAt });
+
       return res.json({ reply, model, sessionId });
     } catch (e) {
-      console.error("Groq chat error:", e?.response?.data || e.message || e);
+      metrics.recordLlm({ model, failed: true, durationMs: Date.now() - startedAt });
+      captureException(e, {
+        message: "groq_chat_failed",
+        route: "/api/projects/:projectId/chat",
+        model,
+        detail: e?.response?.data,
+      });
       return res
         .status(500)
-        .json({ message: "Groq request failed", error: e.message });
+        .json({ message: "Groq request failed", error: e.message, requestId: req.id });
     }
   },
 );
@@ -212,6 +249,7 @@ router.post(
 
     let full = "";
     let usage;
+    const startedAt = Date.now();
     try {
       let stream;
       try {
@@ -246,14 +284,27 @@ router.post(
         usage,
       );
 
+      recordCompletion({ model, usage, startedAt, streamed: true });
+
       send({ done: true });
       res.write("data: [DONE]\n\n");
       res.end();
     } catch (e) {
-      console.error("Groq stream error:", e?.response?.data || e.message || e);
-      // If nothing has been sent yet we could still set a status, but headers
-      // are already flushed — surface the error as an SSE event instead.
-      send({ error: e.message || "Groq request failed" });
+      metrics.recordLlm({
+        model,
+        streamed: true,
+        failed: true,
+        durationMs: Date.now() - startedAt,
+      });
+      captureException(e, {
+        message: "groq_stream_failed",
+        route: "/api/projects/:projectId/chat/stream",
+        model,
+        detail: e?.response?.data,
+      });
+      // Headers are already flushed, so surface the error as an SSE event
+      // rather than an HTTP status.
+      send({ error: e.message || "Groq request failed", requestId: req.id });
       res.end();
     }
   },
@@ -282,7 +333,7 @@ router.delete(
 
       return res.json({ message: "Chat history cleared successfully" });
     } catch (e) {
-      console.error("Error clearing chat history:", e);
+      logger.error("chat_clear_failed", { err: e });
       return res
         .status(500)
         .json({ message: "Failed to clear chat history", error: e.message });
