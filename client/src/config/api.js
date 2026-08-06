@@ -1,10 +1,17 @@
 import axios from "axios";
+import { clearSession, getToken } from "../lib/authStorage";
 
 // Use environment variable with fallback to localhost
 const API_URL = process.env.REACT_APP_API_BASE || "http://localhost:8080";
 
-// Debug: Log the API URL to console
-// console.log("API_URL:", API_URL);
+/**
+ * Endpoints that answer 401 as a normal outcome rather than an expired session.
+ * A wrong password is not a reason to wipe storage and reload the page — doing
+ * that is what made failed logins look like the form silently reset itself.
+ */
+const AUTH_ENDPOINTS = /\/api\/auth\/(login|register|forgot-password|reset-password)$/;
+
+const isCredentialCheck = (url = "") => AUTH_ENDPOINTS.test(url.split("?")[0]);
 
 // Create axios instance with default config
 export const api = axios.create({
@@ -13,7 +20,9 @@ export const api = axios.create({
     Accept: "application/json",
     "Content-Type": "application/json",
   },
-  timeout: 10000, // 10 second timeout
+  // Free-tier hosts cold-start well past ten seconds; the old timeout turned
+  // a slow first request into "Network Error" on every page at once.
+  timeout: Number(process.env.REACT_APP_API_TIMEOUT_MS) || 45000,
   validateStatus: function (status) {
     return status >= 200 && status < 300; // default
   },
@@ -22,7 +31,7 @@ export const api = axios.create({
 // Add request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("auth_token");
+    const token = getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -43,15 +52,57 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Clear invalid token and redirect to login
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("auth_user");
-      window.location.href = "/login";
+    const url = error.config?.url || "";
+    if (error.response?.status === 401 && !isCredentialCheck(url)) {
+      // A genuinely expired session: drop it and send the user to log in.
+      clearSession();
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }
 );
+
+/**
+ * Turn any axios failure into an Error whose `message` is safe to render.
+ *
+ * Services used to rethrow the raw axios error, so forms displayed
+ * "Request failed with status code 500" — technically true, useless to read.
+ */
+export const normalizeApiError = (error, fallback = "Something went wrong.") => {
+  const data = error?.response?.data;
+
+  const message =
+    data?.message ||
+    data?.errors?.[0]?.msg ||
+    (typeof data === "string" && data.length < 300 ? data : null);
+
+  if (message) {
+    const normalized = new Error(message);
+    normalized.status = error.response?.status;
+    normalized.field = data?.field;
+    normalized.retryAfter = data?.retryAfter;
+    normalized.requestId = data?.requestId;
+    return normalized;
+  }
+
+  if (error?.code === "ECONNABORTED") {
+    return new Error(
+      "The server took too long to respond. It may be waking up — try again."
+    );
+  }
+
+  if (error?.message === "Network Error" || !error?.response) {
+    return new Error(
+      "Can't reach the server. Check your connection and try again."
+    );
+  }
+
+  const normalized = new Error(fallback);
+  normalized.status = error.response?.status;
+  return normalized;
+};
 
 export default api;
 
@@ -62,6 +113,10 @@ export const API_ENDPOINTS = {
   auth: {
     register: `${API_URL}/api/auth/register`,
     login: `${API_URL}/api/auth/login`,
+    logout: `${API_URL}/api/auth/logout`,
+    forgotPassword: `${API_URL}/api/auth/forgot-password`,
+    resetPassword: `${API_URL}/api/auth/reset-password`,
+    changePassword: `${API_URL}/api/auth/change-password`,
   },
 
   // User management endpoints
@@ -90,6 +145,18 @@ export const API_ENDPOINTS = {
       `${API_URL}/api/projects/${projectId}/prompts/${promptId}`,
     delete: (projectId, promptId) =>
       `${API_URL}/api/projects/${projectId}/prompts/${promptId}`,
+  },
+
+  // Conversation threads within a project
+  conversations: {
+    list: (projectId) => `${API_URL}/api/projects/${projectId}/conversations`,
+    create: (projectId) => `${API_URL}/api/projects/${projectId}/conversations`,
+    rename: (projectId, conversationId) =>
+      `${API_URL}/api/projects/${projectId}/conversations/${conversationId}`,
+    delete: (projectId, conversationId) =>
+      `${API_URL}/api/projects/${projectId}/conversations/${conversationId}`,
+    search: (projectId) =>
+      `${API_URL}/api/projects/${projectId}/conversations/search`,
   },
 
   // Chat endpoints

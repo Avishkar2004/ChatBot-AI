@@ -12,6 +12,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -42,10 +43,10 @@ const Login = () => {
         throw new Error('Invalid response from server');
       }
 
-      login(response.token, response.user);
+      // `remember` decides whether the session survives closing the tab.
+      login(response.token, response.user, { remember });
       navigate('/dashboard');
     } catch (err) {
-      console.error('Login error:', err);
       setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
@@ -122,12 +123,14 @@ const Login = () => {
                     id="remember"
                     name="remember"
                     type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
                     className="h-3.5 w-3.5 cursor-pointer rounded border-line bg-surface-muted text-brand-500 focus:ring-2 focus:ring-brand-500/40 focus:ring-offset-0"
                   />
-                  Remember me
+                  Keep me signed in
                 </label>
                 <Link
-                  to="#"
+                  to="/forgot-password"
                   className="focus-ring rounded text-[13px] font-medium text-brand-300 transition-colors hover:text-brand-200"
                 >
                   Forgot password?

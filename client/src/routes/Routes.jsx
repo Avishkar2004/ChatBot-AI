@@ -8,6 +8,8 @@ import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Home from "../pages/Home.jsx";
 import Signup from "../pages/Signup.jsx";
 import Login from "../pages/Login.jsx";
+import ForgotPassword from "../pages/ForgotPassword.jsx";
+import ResetPassword from "../pages/ResetPassword.jsx";
 import Features from "../components/Features.jsx";
 import Dashboard from "../pages/Dashboard.jsx";
 import Projects from "../pages/Projects.jsx";
@@ -34,6 +36,8 @@ const AppRoutes = () => {
         <Route path="/" element={<Home />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/features" element={<Features />} />
         <Route
           path="/dashboard"

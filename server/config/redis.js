@@ -118,6 +118,7 @@ class RedisClient {
 
   // Cache methods
   async set(key, value, ttl = 3600) {
+    if (!this.isAvailable()) return false;
     try {
       const client = this.getClient();
       const serializedValue = JSON.stringify(value);
@@ -134,6 +135,7 @@ class RedisClient {
   }
 
   async get(key) {
+    if (!this.isAvailable()) return null;
     try {
       const client = this.getClient();
       const value = await client.get(key);
@@ -145,6 +147,7 @@ class RedisClient {
   }
 
   async del(key) {
+    if (!this.isAvailable()) return false;
     try {
       const client = this.getClient();
       await client.del(key);
@@ -156,6 +159,7 @@ class RedisClient {
   }
 
   async exists(key) {
+    if (!this.isAvailable()) return false;
     try {
       const client = this.getClient();
       const result = await client.exists(key);
@@ -167,6 +171,7 @@ class RedisClient {
   }
 
   async expire(key, ttl) {
+    if (!this.isAvailable()) return false;
     try {
       const client = this.getClient();
       await client.expire(key, ttl);
@@ -179,6 +184,7 @@ class RedisClient {
 
   // Hash operations for user sessions
   async hset(key, field, value) {
+    if (!this.isAvailable()) return false;
     try {
       const client = this.getClient();
       await client.hSet(key, field, JSON.stringify(value));
@@ -190,6 +196,7 @@ class RedisClient {
   }
 
   async hget(key, field) {
+    if (!this.isAvailable()) return null;
     try {
       const client = this.getClient();
       const value = await client.hGet(key, field);
@@ -201,6 +208,7 @@ class RedisClient {
   }
 
   async hdel(key, field) {
+    if (!this.isAvailable()) return false;
     try {
       const client = this.getClient();
       await client.hDel(key, field);
@@ -213,6 +221,7 @@ class RedisClient {
 
   // List operations for chat messages
   async lpush(key, value) {
+    if (!this.isAvailable()) return false;
     try {
       const client = this.getClient();
       await client.lPush(key, JSON.stringify(value));
@@ -224,6 +233,7 @@ class RedisClient {
   }
 
   async lrange(key, start = 0, stop = -1) {
+    if (!this.isAvailable()) return [];
     try {
       const client = this.getClient();
       const values = await client.lRange(key, start, stop);
@@ -235,6 +245,7 @@ class RedisClient {
   }
 
   async ltrim(key, start, stop) {
+    if (!this.isAvailable()) return false;
     try {
       const client = this.getClient();
       await client.lTrim(key, start, stop);
@@ -242,6 +253,42 @@ class RedisClient {
     } catch (error) {
       console.error('Redis LTRIM error:', error);
       return false;
+    }
+  }
+
+  /**
+   * Atomically bump a counter and, only when it is newly created, give it a TTL.
+   *
+   * A plain GET/SET pair both races under concurrency and pushes the expiry out
+   * on every hit, which silently turns a fixed window into one that never ends.
+   * INCR + conditional EXPIRE keeps the window anchored to its first request.
+   *
+   * @returns {Promise<{ count: number, ttl: number } | null>} null when Redis
+   *          is unavailable, so callers can decide to fail open.
+   */
+  async incrementInWindow(key, windowSeconds) {
+    // Callers fail open on null. Check availability first so a server running
+    // without Redis does not log a stack trace on every single request.
+    if (!this.isAvailable()) return null;
+
+    try {
+      const client = this.getClient();
+      const count = await client.incr(key);
+      if (count === 1) {
+        await client.expire(key, windowSeconds);
+        return { count, ttl: windowSeconds };
+      }
+      let ttl = await client.ttl(key);
+      // -1 = key exists with no expiry (lost TTL); re-anchor it rather than
+      // leaking a counter that blocks the user forever.
+      if (ttl < 0) {
+        await client.expire(key, windowSeconds);
+        ttl = windowSeconds;
+      }
+      return { count, ttl };
+    } catch (error) {
+      console.error('Redis INCR error:', error);
+      return null;
     }
   }
 }

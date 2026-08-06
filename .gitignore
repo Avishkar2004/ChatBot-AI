@@ -24,6 +24,10 @@ pnpm-debug.log*
 .env.*
 server/.env
 client/.env
+# ...but the template must ship, or a fresh clone has no idea which vars are
+# required (JWT_SECRET now hard-fails in production without one).
+!.env.example
+!**/.env.example
 
 # Coverage
 coverage/

@@ -1,11 +1,19 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
-import { fetchMe } from "../services/auth.js";
+import { fetchMe, logout as apiLogout } from "../services/auth.js";
+import {
+  clearSession,
+  getStoredUser,
+  getToken,
+  saveSession,
+  saveUser,
+} from "../lib/authStorage";
 
 const AuthContext = createContext(null);
 
@@ -14,74 +22,64 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth state from localStorage
+  // Restore a session from whichever storage it was written to.
   useEffect(() => {
+    let cancelled = false;
+
     const initializeAuth = async () => {
-      const storedToken = localStorage.getItem("auth_token");
-      const storedUser = localStorage.getItem("auth_user");
+      const storedToken = getToken();
 
-      if (
-        storedToken &&
-        storedToken !== "undefined" &&
-        storedToken !== "null"
-      ) {
-        setToken(storedToken);
-
-        // If we have a token but no user, try to fetch user data
-        if (!storedUser) {
-          try {
-            const userData = await fetchMe(storedToken);
-            setUser(userData.user);
-            localStorage.setItem("auth_user", JSON.stringify(userData.user));
-          } catch (error) {
-            console.error("Failed to fetch user data:", error);
-            // Token is invalid, clear everything
-            localStorage.removeItem("auth_token");
-            localStorage.removeItem("auth_user");
-            setToken(null);
-            setUser(null);
-          }
-        } else {
-          try {
-            setUser(JSON.parse(storedUser));
-          } catch (error) {
-            console.error("Failed to parse stored user:", error);
-            localStorage.removeItem("auth_user");
-            setUser(null);
-          }
-        }
-      } else {
-        // Clean up invalid tokens
-        if (storedToken === "undefined" || storedToken === "null") {
-          localStorage.removeItem("auth_token");
-          localStorage.removeItem("auth_user");
-        }
+      if (!storedToken) {
+        clearSession();
+        if (!cancelled) setLoading(false);
+        return;
       }
 
-      setLoading(false);
+      if (!cancelled) setToken(storedToken);
+
+      const storedUser = getStoredUser();
+      if (storedUser) {
+        if (!cancelled) setUser(storedUser);
+        if (!cancelled) setLoading(false);
+        return;
+      }
+
+      try {
+        const data = await fetchMe();
+        if (cancelled) return;
+        setUser(data.user);
+        saveUser(data.user);
+      } catch {
+        // The token no longer works — start clean rather than half signed in.
+        if (cancelled) return;
+        clearSession();
+        setToken(null);
+        setUser(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     };
 
     initializeAuth();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const login = (newToken, newUser) => {
-    if (!newToken || newToken === "undefined" || newToken === "null") {
-      console.error("Invalid token provided to login");
-      return;
-    }
-
+  const login = useCallback((newToken, newUser, { remember = true } = {}) => {
+    if (!newToken) return;
     setToken(newToken);
     setUser(newUser);
-    localStorage.setItem("auth_token", newToken);
-    localStorage.setItem("auth_user", JSON.stringify(newUser));
-  };
+    saveSession(newToken, newUser, { remember });
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(async () => {
+    // Revoke server-side first, while the token is still attached to requests.
+    await apiLogout();
+    clearSession();
     setToken(null);
     setUser(null);
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user");
-  };
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -90,14 +88,9 @@ export const AuthProvider = ({ children }) => {
       login,
       logout,
       loading,
-      isAuthenticated: !!(
-        token &&
-        token !== "undefined" &&
-        token !== "null" &&
-        user
-      ),
+      isAuthenticated: !!(token && user),
     }),
-    [token, user, loading],
+    [token, user, loading, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

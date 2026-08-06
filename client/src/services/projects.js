@@ -1,4 +1,12 @@
-import api, { API_ENDPOINTS } from "../config/api.js";
+import api, { API_ENDPOINTS, normalizeApiError } from "../config/api.js";
+import { getToken, clearSession } from "../lib/authStorage";
+
+const unwrapList = (data, key) => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data[key])) return data[key];
+  if (data && Array.isArray(data.data)) return data.data;
+  return [];
+};
 
 export async function listProjects(forceRefresh = false) {
   try {
@@ -8,29 +16,14 @@ export async function listProjects(forceRefresh = false) {
       : API_ENDPOINTS.projects.list;
 
     const response = await api.get(url);
-
-    // Ensure we return an array
     const data = response.data;
-    if (Array.isArray(data)) {
-      return data;
+    const list = unwrapList(data, "projects");
+    if (list.length || Array.isArray(data) || data?.projects || data?.data) {
+      return list;
     }
-
-    // Handle wrapped responses
-    if (data && Array.isArray(data.projects)) {
-      return data.projects;
-    }
-
-    if (data && Array.isArray(data.data)) {
-      return data.data;
-    }
-
-    // If it's not an array, return empty array or wrap single object
-    return Array.isArray(data) ? data : data ? [data] : [];
+    return data ? [data] : [];
   } catch (error) {
-    if (error.response?.data?.message) {
-      throw new Error(error.response.data.message);
-    }
-    throw error;
+    throw normalizeApiError(error, "Could not load your projects.");
   }
 }
 
@@ -39,16 +32,7 @@ export async function createProject(payload) {
     const response = await api.post(API_ENDPOINTS.projects.create, payload);
     return response.data;
   } catch (error) {
-    console.error("Failed to create project:", error);
-
-    // Extract more specific error message
-    if (error.response?.data?.message) {
-      throw new Error(error.response.data.message);
-    } else if (error.message) {
-      throw new Error(error.message);
-    } else {
-      throw new Error("Failed to create project");
-    }
+    throw normalizeApiError(error, "Could not create the project.");
   }
 }
 
@@ -57,8 +41,7 @@ export async function getProject(projectId) {
     const response = await api.get(API_ENDPOINTS.projects.get(projectId));
     return response.data;
   } catch (error) {
-    console.error("Failed to fetch project:", error);
-    throw error;
+    throw normalizeApiError(error, "Could not load this project.");
   }
 }
 
@@ -70,8 +53,7 @@ export async function updateProject(projectId, payload) {
     );
     return response.data;
   } catch (error) {
-    console.error("Failed to update project:", error);
-    throw error;
+    throw normalizeApiError(error, "Could not save the project.");
   }
 }
 
@@ -80,22 +62,8 @@ export async function deleteProject(projectId) {
     const response = await api.delete(API_ENDPOINTS.projects.delete(projectId));
     return response.data;
   } catch (error) {
-    console.error("Failed to delete project:", error);
-    throw error;
+    throw normalizeApiError(error, "Could not delete the project.");
   }
-}
-
-function normalizePromptList(data) {
-  if (Array.isArray(data)) {
-    return data;
-  }
-  if (data && Array.isArray(data.prompts)) {
-    return data.prompts;
-  }
-  if (data && Array.isArray(data.data)) {
-    return data.data;
-  }
-  return [];
 }
 
 export async function listPrompts(projectId, forceRefresh = false) {
@@ -104,13 +72,9 @@ export async function listPrompts(projectId, forceRefresh = false) {
       ? `${API_ENDPOINTS.prompts.list(projectId)}?_t=${Date.now()}`
       : API_ENDPOINTS.prompts.list(projectId);
     const response = await api.get(url);
-    return normalizePromptList(response.data);
+    return unwrapList(response.data, "prompts");
   } catch (error) {
-    if (error.response?.data?.message) {
-      throw new Error(error.response.data.message);
-    }
-    console.error("Failed to fetch prompts:", error);
-    throw error;
+    throw normalizeApiError(error, "Could not load the instructions.");
   }
 }
 
@@ -122,8 +86,7 @@ export async function createPrompt(projectId, payload) {
     );
     return response.data;
   } catch (error) {
-    console.error("Failed to create prompt:", error);
-    throw error;
+    throw normalizeApiError(error, "Could not save the instruction.");
   }
 }
 
@@ -134,8 +97,7 @@ export async function getPrompt(projectId, promptId) {
     );
     return response.data;
   } catch (error) {
-    console.error("Failed to fetch prompt:", error);
-    throw error;
+    throw normalizeApiError(error, "Could not load the instruction.");
   }
 }
 
@@ -147,8 +109,7 @@ export async function updatePrompt(projectId, promptId, payload) {
     );
     return response.data;
   } catch (error) {
-    console.error("Failed to update prompt:", error);
-    throw error;
+    throw normalizeApiError(error, "Could not save the instruction.");
   }
 }
 
@@ -159,22 +120,84 @@ export async function deletePrompt(projectId, promptId) {
     );
     return response.data;
   } catch (error) {
-    console.error("Failed to delete prompt:", error);
-    throw error;
+    throw normalizeApiError(error, "Could not delete the instruction.");
   }
 }
 
-export async function sendChat(projectId, message, sessionId) {
+// ---------------------------------------------------------------------------
+// Conversation threads
+// ---------------------------------------------------------------------------
+
+export async function listConversations(projectId) {
+  try {
+    const response = await api.get(API_ENDPOINTS.conversations.list(projectId));
+    return unwrapList(response.data, "conversations");
+  } catch (error) {
+    throw normalizeApiError(error, "Could not load your conversations.");
+  }
+}
+
+export async function createConversation(projectId, title) {
+  try {
+    const response = await api.post(
+      API_ENDPOINTS.conversations.create(projectId),
+      title ? { title } : {}
+    );
+    return response.data?.conversation ?? response.data;
+  } catch (error) {
+    throw normalizeApiError(error, "Could not start a new chat.");
+  }
+}
+
+export async function renameConversation(projectId, conversationId, title) {
+  try {
+    const response = await api.patch(
+      API_ENDPOINTS.conversations.rename(projectId, conversationId),
+      { title }
+    );
+    return response.data?.conversation ?? response.data;
+  } catch (error) {
+    throw normalizeApiError(error, "Could not rename this chat.");
+  }
+}
+
+export async function deleteConversation(projectId, conversationId) {
+  try {
+    const response = await api.delete(
+      API_ENDPOINTS.conversations.delete(projectId, conversationId)
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizeApiError(error, "Could not delete this chat.");
+  }
+}
+
+export async function searchConversations(projectId, query, { signal } = {}) {
+  try {
+    const response = await api.get(
+      API_ENDPOINTS.conversations.search(projectId),
+      { params: { q: query }, signal }
+    );
+    return unwrapList(response.data, "results");
+  } catch (error) {
+    if (error?.code === "ERR_CANCELED") return [];
+    throw normalizeApiError(error, "Search failed. Please try again.");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Chat
+// ---------------------------------------------------------------------------
+
+export async function sendChat(projectId, message, conversationId) {
   try {
     const response = await api.post(API_ENDPOINTS.chat.send(projectId), {
       message,
-      // optional: when provided, server will continue the same redis session
-      sessionId,
+      conversationId,
     });
     return response.data;
   } catch (error) {
-    console.error("Failed to send chat:", error);
-    throw error;
+    throw normalizeApiError(error, "Could not send your message.");
   }
 }
 
@@ -185,37 +208,46 @@ export async function sendChat(projectId, message, sessionId) {
  * ReadableStream directly. Deltas are delivered via the `onDelta` callback as
  * they arrive; the resolved promise contains the full reply plus metadata.
  *
+ * Pass `signal` to stop a reply mid-flight — aborting closes the connection,
+ * which the server sees and uses to stop generating.
+ *
  * @param {string} projectId
  * @param {string} message
- * @param {string} [sessionId]
+ * @param {{ conversationId?: string, retryFromMessageId?: string }} [options]
  * @param {{ onDelta?: (delta: string, full: string) => void,
- *           onMeta?: (meta: { model?: string, sessionId?: string }) => void,
+ *           onMeta?: (meta: { model?: string, conversationId?: string }) => void,
+ *           onSaved?: (saved: { userMessageId?: string, assistantMessageId?: string, title?: string }) => void,
  *           signal?: AbortSignal }} [handlers]
- * @returns {Promise<{ reply: string, model?: string, sessionId?: string }>}
+ * @returns {Promise<{ reply: string, model?: string, conversationId?: string, stopped?: boolean }>}
  */
 export async function sendChatStream(
   projectId,
   message,
-  sessionId,
-  { onDelta, onMeta, signal } = {}
+  { conversationId, retryFromMessageId } = {},
+  { onDelta, onMeta, onSaved, signal } = {}
 ) {
-  const token = localStorage.getItem("auth_token");
+  const token = getToken();
 
-  const response = await fetch(API_ENDPOINTS.chat.stream(projectId), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "text/event-stream",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ message, sessionId }),
-    signal,
-  });
+  let response;
+  try {
+    response = await fetch(API_ENDPOINTS.chat.stream(projectId), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ message, conversationId, retryFromMessageId }),
+      signal,
+    });
+  } catch (err) {
+    if (err?.name === "AbortError") throw err;
+    throw new Error("Can't reach the server. Check your connection and try again.");
+  }
 
   if (response.status === 401) {
     // Mirror the axios interceptor: drop the dead token and bounce to login.
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user");
+    clearSession();
     window.location.href = "/login";
     throw new Error("Session expired. Please log in again.");
   }
@@ -236,7 +268,11 @@ export async function sendChatStream(
   let buffer = "";
   let full = "";
   let meta = {};
+  let saved;
+  let stopped = false;
 
+  // Aborting mid-read rejects `reader.read()`; that is a deliberate stop, not
+  // a failure, so it resolves with whatever text already arrived.
   try {
     while (true) {
       const { value, done } = await reader.read();
@@ -268,35 +304,51 @@ export async function sendChatStream(
           meta = payload.meta;
           onMeta?.(payload.meta);
         }
+        if (payload.saved) {
+          saved = payload.saved;
+          onSaved?.(payload.saved);
+        }
         if (payload.delta) {
           full += payload.delta;
           onDelta?.(payload.delta, full);
         }
       }
     }
+  } catch (err) {
+    if (err?.name === "AbortError" || signal?.aborted) {
+      stopped = true;
+    } else {
+      throw err;
+    }
   } finally {
-    reader.releaseLock?.();
+    try {
+      reader.releaseLock?.();
+    } catch {
+      // already released by the abort
+    }
   }
 
-  return { reply: full, ...meta };
+  return { reply: full, stopped, saved, ...meta };
 }
 
-export async function getChatHistory(projectId) {
+export async function getChatHistory(projectId, conversationId) {
   try {
-    const response = await api.get(API_ENDPOINTS.chat.history(projectId));
+    const response = await api.get(API_ENDPOINTS.chat.history(projectId), {
+      params: conversationId ? { conversationId } : undefined,
+    });
     return response.data;
   } catch (error) {
-    console.error("Failed to fetch chat history:", error);
-    throw error;
+    throw normalizeApiError(error, "Could not load this conversation.");
   }
 }
 
-export async function clearChatHistory(projectId) {
+export async function clearChatHistory(projectId, conversationId) {
   try {
-    const response = await api.delete(API_ENDPOINTS.chat.clear(projectId));
+    const response = await api.delete(API_ENDPOINTS.chat.clear(projectId), {
+      params: conversationId ? { conversationId } : undefined,
+    });
     return response.data;
   } catch (error) {
-    console.error("Failed to clear chat history:", error);
-    throw error;
+    throw normalizeApiError(error, "Could not clear this conversation.");
   }
 }

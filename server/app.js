@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import "dotenv/config";
 import connectDB from "./config/db.js";
 import redisClient from "./config/redis.js";
@@ -136,6 +137,13 @@ const initializeServer = async () => {
       });
     }
 
+    if (!process.env.RESEND_API_KEY) {
+      logger.warn("mailer_unconfigured", {
+        impact: "password reset links are written to this log instead of emailed",
+        fix: "set RESEND_API_KEY and MAIL_FROM",
+      });
+    }
+
     app.listen(PORT, () => {
       logger.info("server_listening", {
         port: PORT,
@@ -180,10 +188,15 @@ app.get("/health", apiCache({ ttl: 30 }), async (req, res) => {
     redisStatus = "Error";
   }
 
-  res.json({
-    status: "OK",
+  // readyState 1 = connected. This used to be hardcoded to "Connected", so the
+  // health check reported healthy while every request was failing on Mongo.
+  const database =
+    mongoose.connection.readyState === 1 ? "Connected" : "Disconnected";
+
+  res.status(database === "Connected" ? 200 : 503).json({
+    status: database === "Connected" ? "OK" : "DEGRADED",
     timestamp: new Date().toISOString(),
-    database: "Connected",
+    database,
     redis: redisStatus,
     // Note: no requestId here — this response is cached for 30s, so the header
     // (set per request) is the correlation source of truth for /health.

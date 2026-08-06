@@ -1,5 +1,7 @@
 import redisClient from "../config/redis.js";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../config/secrets.js";
+import tokenRegistry from "../services/tokenRegistry.js";
 
 // Enhanced auth middleware with Redis caching
 export const redisAuth = async (req, res, next) => {
@@ -12,9 +14,7 @@ export const redisAuth = async (req, res, next) => {
         .json({ message: "No token, authorization denied" });
     }
 
-    // Check if token is blacklisted in Redis
-    const isBlacklisted = await redisClient.exists(`blacklist:${token}`);
-    if (isBlacklisted) {
+    if (await tokenRegistry.isRevoked(token)) {
       return res.status(401).json({ message: "Token has been revoked" });
     }
 
@@ -30,11 +30,11 @@ export const redisAuth = async (req, res, next) => {
     }
 
     // Token not in cache, verify JWT
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     // Cache the user data for future requests
     const userData = {
-      id: decoded.id,
+      id: decoded.sub || decoded.id,
       email: decoded.email,
       username: decoded.username,
     };
@@ -53,18 +53,9 @@ export const redisAuth = async (req, res, next) => {
 export const blacklistToken = async (req, res, next) => {
   try {
     const token = req.header("Authorization")?.replace("Bearer ", "");
-
     if (token) {
-      // Add token to blacklist with expiration
-      const decoded = jwt.decode(token);
-      const exp = decoded.exp;
-      const ttl = exp - Math.floor(Date.now() / 1000);
-
-      if (ttl > 0) {
-        await redisClient.set(`blacklist:${token}`, "true", ttl);
-      }
+      await tokenRegistry.revoke(token, jwt.decode(token)?.exp);
     }
-
     next();
   } catch (error) {
     console.error("Token blacklist error:", error);
@@ -72,75 +63,69 @@ export const blacklistToken = async (req, res, next) => {
   }
 };
 
-// Rate limiting middleware using Redis
-export const rateLimit = (windowMs = 15 * 60 * 1000, max = 100) => {
+/**
+ * Fixed-window limiter.
+ *
+ * The previous implementation re-SET the key on every request, which pushed the
+ * expiry out each time and turned the "window" into a rolling one that only
+ * ended once you stopped entirely — so ten messages spread across ten minutes
+ * still tripped a one-minute limit. `incrementInWindow` sets the TTL once, when
+ * the window opens.
+ *
+ * Fails open on a Redis outage: an optional cache going down must not take chat
+ * with it.
+ */
+const windowLimiter = ({ keyFor, windowMs, max, message }) => {
+  const windowSeconds = Math.ceil(windowMs / 1000);
+
   return async (req, res, next) => {
     try {
-      const key = `rate_limit:${req.ip}`;
-      const current = await redisClient.get(key);
+      const key = keyFor(req);
+      if (!key) return next();
 
-      if (current === null) {
-        // First request in window
-        await redisClient.set(key, "1", Math.ceil(windowMs / 1000));
-        return next();
-      }
+      const result = await redisClient.incrementInWindow(key, windowSeconds);
+      if (!result) return next(); // Redis unavailable — allow through.
 
-      const count = parseInt(current);
-      if (count >= max) {
+      const remaining = Math.max(0, max - result.count);
+      res.setHeader("X-RateLimit-Limit", max);
+      res.setHeader("X-RateLimit-Remaining", remaining);
+
+      if (result.count > max) {
+        const retryAfter = Math.max(1, result.ttl);
+        res.setHeader("Retry-After", retryAfter);
         return res.status(429).json({
-          message: "Too many requests, please try again later",
-          retryAfter: Math.ceil(windowMs / 1000),
+          message: message(retryAfter),
+          retryAfter,
         });
       }
 
-      // Increment counter
-      await redisClient.set(
-        key,
-        (count + 1).toString(),
-        Math.ceil(windowMs / 1000)
-      );
-      next();
+      return next();
     } catch (error) {
       console.error("Rate limit error:", error);
-      // If Redis fails, allow request to proceed
-      next();
+      return next();
     }
   };
 };
 
-// Chat rate limiting (more restrictive)
-export const chatRateLimit = (windowMs = 60 * 1000, max = 5) => {
-  return async (req, res, next) => {
-    try {
-      const userId = req.user?.id;
-      if (!userId) return next();
+const plural = (seconds) =>
+  seconds === 1 ? "1 second" : `${seconds} seconds`;
 
-      const key = `chat_rate_limit:${userId}`;
-      const current = await redisClient.get(key);
+export const rateLimit = (windowMs = 15 * 60 * 1000, max = 100) =>
+  windowLimiter({
+    keyFor: (req) => `rate_limit:${req.ip}`,
+    windowMs,
+    max,
+    message: (retryAfter) =>
+      `Too many requests. Please try again in ${plural(retryAfter)}.`,
+  });
 
-      if (current === null) {
-        await redisClient.set(key, "1", Math.ceil(windowMs / 1000));
-        return next();
-      }
-
-      const count = parseInt(current);
-      if (count >= max) {
-        return res.status(429).json({
-          message:
-            "Chat rate limit exceeded, please wait before sending another message",
-          retryAfter: Math.ceil(windowMs / 1000),
-        });
-      }
-
-      await redisClient.set(
-        key,
-        (count + 1).toString(),
-        Math.ceil(windowMs / 1000)
-      );
-      next();
-    } catch (error) {
-      console.error("Chat rate limit error:", error);
-      next();
-    }
-  };
-};
+// Chat rate limiting (more restrictive, and per user rather than per IP so
+// people behind one office NAT do not share a budget)
+export const chatRateLimit = (windowMs = 60 * 1000, max = 5) =>
+  windowLimiter({
+    keyFor: (req) => (req.user?.id ? `chat_rate_limit:${req.user.id}` : null),
+    windowMs,
+    max,
+    message: (retryAfter) =>
+      `You're sending messages faster than the limit allows. Try again in ${plural(retryAfter)}.`,
+  });

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { body, param } from "express-validator";
+import { body, param, query, validationResult } from "express-validator";
 import requireAuth from "../middleware/auth.js";
 import { chatRateLimit } from "../middleware/redisAuth.js";
 import redisCache from "../services/redisCache.js";
@@ -17,6 +17,38 @@ const router = Router();
 router.use(requireAuth);
 
 const FALLBACK_MODEL = "llama-3.1-8b-instant";
+
+/**
+ * How much of the thread is replayed to the model each turn.
+ *
+ * This used to be a hard `slice(-10)` — five exchanges — which is why the
+ * assistant appeared to forget the start of any real conversation. The window
+ * is bounded twice: by message count and by characters, so a few very long
+ * messages cannot silently blow past the model's context or the per-minute
+ * token budget.
+ */
+const CONTEXT_MESSAGES = Number(process.env.CHAT_CONTEXT_MESSAGES || 40);
+const CONTEXT_CHARS = Number(process.env.CHAT_CONTEXT_CHARS || 24000);
+
+export const selectContext = (
+  history,
+  maxMessages = CONTEXT_MESSAGES,
+  maxChars = CONTEXT_CHARS,
+) => {
+  const selected = [];
+  let chars = 0;
+
+  // Walk backwards from the most recent turn so the newest context always wins.
+  for (let i = history.length - 1; i >= 0 && selected.length < maxMessages; i--) {
+    const message = history[i];
+    const cost = (message?.content || "").length;
+    if (chars + cost > maxChars && selected.length > 0) break;
+    selected.push(message);
+    chars += cost;
+  }
+
+  return selected.reverse();
+};
 
 export const normalizeModel = (m) => {
   if (!m) return FALLBACK_MODEL;
@@ -39,6 +71,21 @@ export const isDecommissionedError = (err) => {
     ? msg.includes("model_decommissioned") || msg.includes("decommissioned")
     : false;
 };
+
+/**
+ * The validator chains were previously declared and never read, so a malformed
+ * projectId reached Mongoose and surfaced as a 500 instead of a clear 400.
+ */
+const validate = (req, res) => {
+  const errors = validationResult(req);
+  if (errors.isEmpty()) return false;
+  const [first] = errors.array();
+  res.status(400).json({ message: first.msg, errors: errors.array() });
+  return true;
+};
+
+const findProject = (req) =>
+  Project.findOne({ _id: req.params.projectId, userId: req.user.id });
 
 // Record token spend + latency for one model call, and log a cost line so a
 // single request can be traced from access log → tokens → dollars.
@@ -65,23 +112,39 @@ const recordCompletion = ({ model, usage = {}, startedAt, streamed = false }) =>
   });
 };
 
-// Build the shared chat request context (project, prompts, messages, model).
+// Build the shared chat request context (project, thread, prompts, messages).
 // Returns { error } with an HTTP status when something is wrong, otherwise the
 // pieces needed to call Groq.
 const buildChatContext = async (req) => {
-  const project = await Project.findOne({
-    _id: req.params.projectId,
-    userId: req.user.id,
-  });
+  const project = await findProject(req);
   if (!project) return { error: { status: 404, message: "Project not found" } };
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey)
-    return { error: { status: 500, message: "GROQ_API_KEY not configured" } };
+    return {
+      error: {
+        status: 503,
+        message: "The assistant is not configured yet. Please try again later.",
+      },
+    };
 
-  const userMessage = req.body.message;
-  const sessionId =
-    req.body.sessionId || `${req.user.id}_${req.params.projectId}`;
+  const userId = req.user.id;
+  const conversation = await conversationStore.resolveConversation({
+    userId,
+    projectId: project._id,
+    conversationId: req.body.conversationId,
+  });
+  if (!conversation)
+    return { error: { status: 404, message: "Conversation not found" } };
+
+  // "Edit this message" and "regenerate" both replay from a known point: drop
+  // that message and everything after it before assembling context.
+  if (req.body.retryFromMessageId) {
+    await conversationStore.truncateFrom(
+      conversation,
+      req.body.retryFromMessageId,
+    );
+  }
 
   // Get cached prompts or fetch from database
   let prompts = await redisCache.getCachedPrompts(project._id);
@@ -98,70 +161,258 @@ const buildChatContext = async (req) => {
     : `You are a helpful assistant for the project "${project.name}".`;
 
   // Read-through history: Redis hot window, with MongoDB fallback on a miss.
-  const userId = req.user.id;
-  const chatHistory = await conversationStore.loadHistory({
-    userId,
-    projectId: project._id,
-    sessionId,
-  });
+  const chatHistory = await conversationStore.loadContext(
+    conversation,
+    CONTEXT_MESSAGES,
+  );
 
   const messages = [
     { role: "system", content: systemText },
-    ...chatHistory.slice(-10), // Keep last 10 messages for context
-    { role: "user", content: userMessage },
+    ...selectContext(chatHistory),
+    { role: "user", content: req.body.message },
   ];
 
   return {
     groq: new Groq({ apiKey }),
     model: normalizeModel(project.model || process.env.GROQ_MODEL),
     messages,
-    userMessage,
-    sessionId,
+    userMessage: req.body.message,
+    conversation,
     userId,
     projectId: project._id,
   };
 };
 
-// GET chat history endpoint
+// ---------------------------------------------------------------------------
+// Conversations
+// ---------------------------------------------------------------------------
+
 router.get(
-  "/:projectId/chat/history",
-  [param("projectId").isMongoId()],
-  async (req, res) => {
+  "/:projectId/conversations",
+  [param("projectId").isMongoId().withMessage("Invalid project id")],
+  async (req, res, next) => {
+    if (validate(req, res)) return;
     try {
-      const project = await Project.findOne({
-        _id: req.params.projectId,
-        userId: req.user.id,
-      });
-      if (!project) {
+      const project = await findProject(req);
+      if (!project)
         return res.status(404).json({ message: "Project not found" });
-      }
 
-      const sessionId = `${req.user.id}_${req.params.projectId}`;
-      const chatHistory = await conversationStore.loadHistory(
-        { userId: req.user.id, projectId: project._id, sessionId },
-        100,
-      );
-
-      return res.json({ messages: chatHistory, sessionId });
+      const conversations = await conversationStore.listConversations({
+        userId: req.user.id,
+        projectId: project._id,
+      });
+      return res.json({ conversations });
     } catch (e) {
-      logger.error("chat_history_failed", { err: e });
-      return res
-        .status(500)
-        .json({ message: "Failed to fetch chat history", error: e.message });
+      return next(e);
     }
   },
 );
 
 router.post(
+  "/:projectId/conversations",
+  [
+    param("projectId").isMongoId().withMessage("Invalid project id"),
+    body("title").optional().isString().trim().isLength({ max: 60 }),
+  ],
+  async (req, res, next) => {
+    if (validate(req, res)) return;
+    try {
+      const project = await findProject(req);
+      if (!project)
+        return res.status(404).json({ message: "Project not found" });
+
+      const conversation = await conversationStore.createConversation({
+        userId: req.user.id,
+        projectId: project._id,
+        title: req.body.title,
+      });
+
+      return res.status(201).json({
+        conversation: {
+          id: String(conversation._id),
+          title: conversation.title,
+          lastMessageAt: conversation.lastMessageAt,
+          messageCount: 0,
+        },
+      });
+    } catch (e) {
+      return next(e);
+    }
+  },
+);
+
+router.patch(
+  "/:projectId/conversations/:conversationId",
+  [
+    param("projectId").isMongoId().withMessage("Invalid project id"),
+    param("conversationId").isMongoId().withMessage("Invalid conversation id"),
+    body("title").isString().trim().isLength({ min: 1, max: 60 }),
+  ],
+  async (req, res, next) => {
+    if (validate(req, res)) return;
+    try {
+      const project = await findProject(req);
+      if (!project)
+        return res.status(404).json({ message: "Project not found" });
+
+      const conversation = await conversationStore.renameConversation({
+        userId: req.user.id,
+        projectId: project._id,
+        conversationId: req.params.conversationId,
+        title: req.body.title,
+      });
+      if (!conversation)
+        return res.status(404).json({ message: "Conversation not found" });
+
+      return res.json({
+        conversation: {
+          id: String(conversation._id),
+          title: conversation.title,
+          lastMessageAt: conversation.lastMessageAt,
+        },
+      });
+    } catch (e) {
+      return next(e);
+    }
+  },
+);
+
+router.delete(
+  "/:projectId/conversations/:conversationId",
+  [
+    param("projectId").isMongoId().withMessage("Invalid project id"),
+    param("conversationId").isMongoId().withMessage("Invalid conversation id"),
+  ],
+  async (req, res, next) => {
+    if (validate(req, res)) return;
+    try {
+      const project = await findProject(req);
+      if (!project)
+        return res.status(404).json({ message: "Project not found" });
+
+      const deleted = await conversationStore.deleteConversation({
+        userId: req.user.id,
+        projectId: project._id,
+        conversationId: req.params.conversationId,
+      });
+      if (!deleted)
+        return res.status(404).json({ message: "Conversation not found" });
+
+      return res.json({ message: "Conversation deleted" });
+    } catch (e) {
+      return next(e);
+    }
+  },
+);
+
+router.get(
+  "/:projectId/conversations/search",
+  [
+    param("projectId").isMongoId().withMessage("Invalid project id"),
+    query("q").isString().trim().isLength({ min: 2, max: 200 }),
+  ],
+  async (req, res, next) => {
+    if (validate(req, res)) return;
+    try {
+      const project = await findProject(req);
+      if (!project)
+        return res.status(404).json({ message: "Project not found" });
+
+      const results = await conversationStore.searchMessages({
+        userId: req.user.id,
+        projectId: project._id,
+        query: req.query.q,
+      });
+      return res.json({ results });
+    } catch (e) {
+      return next(e);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// History
+// ---------------------------------------------------------------------------
+
+router.get(
+  "/:projectId/chat/history",
+  [
+    param("projectId").isMongoId().withMessage("Invalid project id"),
+    query("conversationId")
+      .optional()
+      .isMongoId()
+      .withMessage("Invalid conversation id"),
+  ],
+  async (req, res, next) => {
+    if (validate(req, res)) return;
+    try {
+      const project = await findProject(req);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const conversation = await conversationStore.resolveConversation({
+        userId: req.user.id,
+        projectId: project._id,
+        conversationId: req.query.conversationId,
+      });
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+
+      const messages = await conversationStore.loadMessages(conversation);
+
+      return res.json({
+        messages,
+        conversationId: String(conversation._id),
+        title: conversation.title,
+        // Kept for older clients that echo this back on the next turn.
+        sessionId: conversation.sessionId,
+      });
+    } catch (e) {
+      return next(e);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Chat
+// ---------------------------------------------------------------------------
+
+const chatValidators = [
+  param("projectId").isMongoId().withMessage("Invalid project id"),
+  body("message")
+    .isString()
+    .trim()
+    .isLength({ min: 1, max: 32000 })
+    .withMessage("Message cannot be empty"),
+  body("conversationId")
+    .optional({ values: "falsy" })
+    .isMongoId()
+    .withMessage("Invalid conversation id"),
+  body("retryFromMessageId")
+    .optional({ values: "falsy" })
+    .isMongoId()
+    .withMessage("Invalid message id"),
+];
+
+router.post(
   "/:projectId/chat",
-  [param("projectId").isMongoId(), body("message").isLength({ min: 1 })],
-  chatRateLimit(60 * 1000, 10), // 10 requests per minute
-  async (req, res) => {
-    const ctx = await buildChatContext(req);
+  chatValidators,
+  chatRateLimit(60 * 1000, 20),
+  async (req, res, next) => {
+    if (validate(req, res)) return;
+
+    let ctx;
+    try {
+      ctx = await buildChatContext(req);
+    } catch (e) {
+      return next(e);
+    }
     if (ctx.error)
       return res.status(ctx.error.status).json({ message: ctx.error.message });
 
-    const { groq, messages, userMessage, sessionId, userId, projectId } = ctx;
+    const { groq, messages, userMessage, conversation, userId, projectId } = ctx;
     let { model } = ctx;
     const startedAt = Date.now();
 
@@ -189,8 +440,8 @@ router.post(
 
       const reply = completion.choices?.[0]?.message?.content?.trim() || "";
 
-      await conversationStore.persistExchange(
-        { userId, projectId, sessionId, model },
+      const saved = await conversationStore.persistExchange(
+        { conversation, userId, projectId, model },
         userMessage,
         reply,
         completion.usage,
@@ -198,7 +449,13 @@ router.post(
 
       recordCompletion({ model, usage: completion.usage, startedAt });
 
-      return res.json({ reply, model, sessionId });
+      return res.json({
+        reply,
+        model,
+        conversationId: String(conversation._id),
+        sessionId: conversation.sessionId,
+        ...saved,
+      });
     } catch (e) {
       metrics.recordLlm({ model, failed: true, durationMs: Date.now() - startedAt });
       captureException(e, {
@@ -207,9 +464,10 @@ router.post(
         model,
         detail: e?.response?.data,
       });
-      return res
-        .status(500)
-        .json({ message: "Groq request failed", error: e.message, requestId: req.id });
+      return res.status(502).json({
+        message: "The assistant is unavailable right now. Please try again.",
+        requestId: req.id,
+      });
     }
   },
 );
@@ -218,14 +476,21 @@ router.post(
 // Streams tokens as they are generated so the UI can render incrementally.
 router.post(
   "/:projectId/chat/stream",
-  [param("projectId").isMongoId(), body("message").isLength({ min: 1 })],
-  chatRateLimit(60 * 1000, 10), // 10 requests per minute
-  async (req, res) => {
-    const ctx = await buildChatContext(req);
+  chatValidators,
+  chatRateLimit(60 * 1000, 20),
+  async (req, res, next) => {
+    if (validate(req, res)) return;
+
+    let ctx;
+    try {
+      ctx = await buildChatContext(req);
+    } catch (e) {
+      return next(e);
+    }
     if (ctx.error)
       return res.status(ctx.error.status).json({ message: ctx.error.message });
 
-    const { groq, messages, userMessage, sessionId, userId, projectId } = ctx;
+    const { groq, messages, userMessage, conversation, userId, projectId } = ctx;
     let { model } = ctx;
 
     // SSE headers. Disable proxy buffering so deltas flush immediately.
@@ -236,6 +501,13 @@ router.post(
     res.flushHeaders?.();
 
     const send = (payload) => res.write(`data: ${JSON.stringify(payload)}\n\n`);
+
+    // A closed tab must stop the generation loop, not keep burning tokens
+    // writing into a dead socket.
+    let clientGone = false;
+    req.on("close", () => {
+      clientGone = true;
+    });
 
     const openStream = async (m) =>
       groq.chat.completions.create({
@@ -263,8 +535,14 @@ router.post(
         }
       }
 
-      // Tell the client which model/session is in use before tokens arrive.
-      send({ meta: { model, sessionId } });
+      // Tell the client which model/thread is in use before tokens arrive.
+      send({
+        meta: {
+          model,
+          conversationId: String(conversation._id),
+          sessionId: conversation.sessionId,
+        },
+      });
 
       for await (const chunk of stream) {
         // The terminal usage chunk carries no choices.
@@ -274,20 +552,32 @@ router.post(
           full += delta;
           send({ delta });
         }
+        if (clientGone) {
+          // Stop pulling from Groq; whatever arrived is still worth saving.
+          stream.controller?.abort?.();
+          break;
+        }
       }
 
       const reply = full.trim();
-      await conversationStore.persistExchange(
-        { userId, projectId, sessionId, model },
-        userMessage,
-        reply,
-        usage,
-      );
+      // A stopped or abandoned stream still produced text the user saw, so it
+      // is persisted rather than silently thrown away.
+      if (reply) {
+        const saved = await conversationStore.persistExchange(
+          { conversation, userId, projectId, model },
+          userMessage,
+          reply,
+          usage,
+        );
+        if (!clientGone) send({ saved });
+      }
 
       recordCompletion({ model, usage, startedAt, streamed: true });
 
-      send({ done: true });
-      res.write("data: [DONE]\n\n");
+      if (!clientGone) {
+        send({ done: true });
+        res.write("data: [DONE]\n\n");
+      }
       res.end();
     } catch (e) {
       metrics.recordLlm({
@@ -304,39 +594,50 @@ router.post(
       });
       // Headers are already flushed, so surface the error as an SSE event
       // rather than an HTTP status.
-      send({ error: e.message || "Groq request failed", requestId: req.id });
+      send({
+        error: "The assistant is unavailable right now. Please try again.",
+        requestId: req.id,
+      });
       res.end();
     }
   },
 );
 
-// DELETE chat history endpoint
+// Clear the messages in one thread, keeping the thread itself.
 router.delete(
   "/:projectId/chat/clear",
-  [param("projectId").isMongoId()],
-  async (req, res) => {
+  [
+    param("projectId").isMongoId().withMessage("Invalid project id"),
+    query("conversationId")
+      .optional()
+      .isMongoId()
+      .withMessage("Invalid conversation id"),
+  ],
+  async (req, res, next) => {
+    if (validate(req, res)) return;
     try {
-      const project = await Project.findOne({
-        _id: req.params.projectId,
-        userId: req.user.id,
-      });
+      const project = await findProject(req);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
 
-      const sessionId = `${req.user.id}_${req.params.projectId}`;
-      await conversationStore.clear({
+      const conversation = await conversationStore.resolveConversation({
         userId: req.user.id,
         projectId: project._id,
-        sessionId,
+        conversationId: req.query.conversationId,
       });
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
 
-      return res.json({ message: "Chat history cleared successfully" });
+      await conversationStore.clearMessages(conversation);
+
+      return res.json({
+        message: "Chat history cleared successfully",
+        conversationId: String(conversation._id),
+      });
     } catch (e) {
-      logger.error("chat_clear_failed", { err: e });
-      return res
-        .status(500)
-        .json({ message: "Failed to clear chat history", error: e.message });
+      return next(e);
     }
   },
 );

@@ -70,8 +70,10 @@ const Signup = () => {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    // Matches the server rule, so the form can never accept something the API
+    // is about to reject.
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
       setLoading(false);
       return;
     }
@@ -84,10 +86,9 @@ const Signup = () => {
         throw new Error('Invalid response from server');
       }
 
-      login(response.token, response.user);
+      login(response.token, response.user, { remember: true });
       navigate('/dashboard');
     } catch (err) {
-      console.error('Registration error:', err);
       setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
